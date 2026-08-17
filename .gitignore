@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+backend/.env
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+frontend/.env
+frontend/.env.local
+
+# Runtime artifacts (generated)
+models/
+uploads/
+backend/data/
+
+# Logs / OS
+*.log
+.DS_Store
+Thumbs.db
