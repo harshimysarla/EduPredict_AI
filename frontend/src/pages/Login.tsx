@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { GraduationCap, Lock, User, BrainCircuit, ShieldCheck, TrendingUp, Sparkles } from "lucide-react"
+import { GraduationCap, Lock, User, Eye, EyeOff, ShieldCheck, TrendingUp, Sparkles, UserRound, KeyRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,21 +9,33 @@ import { Spinner } from "@/components/ui/spinner"
 import { useAuth } from "@/context/AuthContext"
 import { toast } from "sonner"
 
+const PORTAL_DEMO_ACCOUNTS = [
+  { username: "24951A05B3", name: "Mysarla Harshith", tag: "CSE · Sem V · CGPA 9.22" },
+  { username: "24951A05C3", name: "K. Vishnu Vardhan", tag: "CSE · Sem V · CGPA 8.45" },
+  { username: "24951A05C5", name: "P. Rithvik Reddy", tag: "CSE · Sem V · CGPA 7.62" },
+  { username: "24951A05B8", name: "V. Ananya Sharma", tag: "CSE · Sem V · CGPA 8.92" },
+]
+
+const STAFF_ACCOUNTS = [
+  { username: "admin", name: "Administrator", tag: "admin" },
+  { username: "faculty", name: "Faculty (CSE)", tag: "faculty" },
+]
+
 const featureItems = [
   {
-    icon: BrainCircuit,
-    title: "ML-Based Risk Prediction",
-    desc: "Random Forest & Logistic Regression models trained on real academic data.",
+    icon: ShieldCheck,
+    title: "Performance Index",
+    desc: "A single 0–100 score from academics, attendance, internals, trend and credit completion.",
+  },
+  {
+    icon: TrendingUp,
+    title: "CGPA & SGPA Trends",
+    desc: "Semester-by-semester academic trajectory, exactly like your college portal.",
   },
   {
     icon: Sparkles,
-    title: "Explainable AI",
-    desc: "Understand exactly why each student is flagged, factor by factor.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Early Intervention",
-    desc: "Detect risk early and track whether interventions improve outcomes.",
+    title: "Actionable Insights",
+    desc: "Rule-based strengths, risks and recommendations — no claims of hidden AI models.",
   },
 ]
 
@@ -32,6 +44,8 @@ export default function Login() {
   const navigate = useNavigate()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [remember, setRemember] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -45,12 +59,12 @@ export default function Login() {
     e.preventDefault()
     setError(null)
     if (!username || !password) {
-      setError("Please enter your username and password.")
+      setError("Please enter your roll number (username) and password.")
       return
     }
     setLoading(true)
     try {
-      const res = await login(username.trim(), password)
+      const res = await login(username.trim(), password, remember)
       toast.success(`Welcome back, ${res.full_name}!`)
       navigate(res.role === "student" ? "/student" : "/dashboard")
     } catch (err) {
@@ -73,20 +87,21 @@ export default function Login() {
           </div>
           <div>
             <p className="text-lg font-bold">EduPredict AI</p>
-            <p className="text-xs text-slate-400">Engineering Design Project · B.Tech</p>
+            <p className="text-xs text-slate-400">College Academic Performance Analysis Platform</p>
           </div>
         </div>
 
         <div className="relative space-y-8">
           <div>
             <h1 className="text-4xl font-bold leading-tight">
-              AI-Powered Student
+              Student Academic
               <br />
-              Performance Intelligence
+              Performance Portal
             </h1>
             <p className="mt-4 max-w-md text-slate-300">
-              Predict academic risk early, understand the contributing factors,
-              and intervene before it's too late.
+              A realistic college academic performance analysis system — the same data
+              your Samvidha portal provides (grades, attendance, SGPA, CGPA), analysed
+              into clear, actionable intelligence.
             </p>
           </div>
 
@@ -110,7 +125,7 @@ export default function Login() {
         </div>
 
         <p className="relative text-xs text-slate-500">
-          Attendance + Academics + Engagement → ML → Risk Prediction → Intervention → Improvement
+          Grades · Attendance · Internals → Performance Index → Insights → Improvement
         </p>
       </div>
 
@@ -128,24 +143,24 @@ export default function Login() {
             </div>
             <div>
               <p className="font-bold">EduPredict AI</p>
-              <p className="text-xs text-[var(--muted-foreground)]">AI-Powered Student Performance Intelligence</p>
+              <p className="text-xs text-[var(--muted-foreground)]">Student Academic Performance Portal</p>
             </div>
           </div>
 
           <h2 className="text-2xl font-bold">Sign in</h2>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            Access your academic intelligence dashboard
+            Use your roll number as the username
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">Roll number / Username</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
                 <Input
                   id="username"
                   type="text"
-                  placeholder="e.g. student01"
+                  placeholder="e.g. 24951A05B3"
                   className="pl-9"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -159,15 +174,34 @@ export default function Login() {
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="pl-9"
+                  className="pl-9 pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
+
+            <label className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="h-4 w-4 rounded border-[var(--input)] accent-[var(--primary)]"
+              />
+              Remember me
+            </label>
 
             {error && (
               <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-500">
@@ -189,54 +223,46 @@ export default function Login() {
           </form>
 
           <div className="mt-8 rounded-xl border border-dashed border-[var(--border)] p-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
-              Demo accounts
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+              <KeyRound className="h-3.5 w-3.5" /> Demo mode · Portal accounts
             </p>
             <div className="space-y-1.5 text-xs">
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--muted)]"
-                onClick={() => quickFill("admin", "Admin@123")}
-              >
-                <span className="font-medium">Admin</span>
-                <span className="text-[var(--muted-foreground)]">admin / Admin@123</span>
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--muted)]"
-                onClick={() => quickFill("faculty", "Faculty@123")}
-              >
-                <span className="font-medium">Faculty (CSE)</span>
-                <span className="text-[var(--muted-foreground)]">faculty / Faculty@123</span>
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--muted)]"
-                onClick={() => quickFill("student01", "Student@123")}
-              >
-                <span className="font-medium">Student (Low Risk)</span>
-                <span className="text-[var(--muted-foreground)]">student01 / Student@123</span>
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--muted)]"
-                onClick={() => quickFill("student02", "Student@123")}
-              >
-                <span className="font-medium">Student (Moderate Risk)</span>
-                <span className="text-[var(--muted-foreground)]">student02 / Student@123</span>
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--muted)]"
-                onClick={() => quickFill("student03", "Student@123")}
-              >
-                <span className="font-medium">Student (High Risk)</span>
-                <span className="text-[var(--muted-foreground)]">student03 / Student@123</span>
-              </button>
+              {PORTAL_DEMO_ACCOUNTS.map((a) => (
+                <button
+                  key={a.username}
+                  type="button"
+                  className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-[var(--muted)]"
+                  onClick={() => quickFill(a.username, "demo123")}
+                >
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <UserRound className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
+                    <span className="truncate font-medium">{a.name}</span>
+                  </span>
+                  <span className="shrink-0 text-[var(--muted-foreground)]">{a.username}</span>
+                </button>
+              ))}
             </div>
             <p className="mt-2 text-[11px] text-[var(--muted-foreground)]">
-              Development-only credentials. All demo students share password Student@123.
+              Portal demo accounts share the password demo123 (development-only).
             </p>
+            <div className="mt-3 border-t border-[var(--border)] pt-3">
+              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+                Staff accounts
+              </p>
+              <div className="space-y-1">
+                {STAFF_ACCOUNTS.map((a) => (
+                  <button
+                    key={a.username}
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--muted)]"
+                    onClick={() => quickFill(a.username, a.username === "admin" ? "Admin@123" : "Faculty@123")}
+                  >
+                    <span className="font-medium">{a.name}</span>
+                    <span className="text-[var(--muted-foreground)]">{a.tag}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>

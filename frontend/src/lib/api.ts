@@ -11,12 +11,33 @@ export class ApiError extends Error {
 }
 
 export function getToken(): string | null {
-  return localStorage.getItem("edupredict_token")
+  return localStorage.getItem("edupredict_token") ?? sessionStorage.getItem("edupredict_token")
 }
 
 export function setToken(token: string | null) {
-  if (token) localStorage.setItem("edupredict_token", token)
-  else localStorage.removeItem("edupredict_token")
+  // When a session is restored from sessionStorage keep it there; otherwise
+  // the caller decides whether to persist across browser restarts.
+  if (token) {
+    if (!localStorage.getItem("edupredict_token") && !sessionStorage.getItem("edupredict_token")) {
+      localStorage.setItem("edupredict_token", token)
+    }
+  } else {
+    localStorage.removeItem("edupredict_token")
+    sessionStorage.removeItem("edupredict_token")
+  }
+}
+
+/** Remember-me: persist the token in localStorage (survives browser restart) or
+ * sessionStorage (cleared when the browser closes). Returns the storage used. */
+export function setTokenWithRemember(token: string, remember: boolean): "local" | "session" {
+  localStorage.removeItem("edupredict_token")
+  sessionStorage.removeItem("edupredict_token")
+  if (remember) {
+    localStorage.setItem("edupredict_token", token)
+    return "local"
+  }
+  sessionStorage.setItem("edupredict_token", token)
+  return "session"
 }
 
 async function request<T>(

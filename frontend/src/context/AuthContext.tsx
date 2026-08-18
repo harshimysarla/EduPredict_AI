@@ -7,14 +7,14 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import { api, getToken, setToken } from "@/lib/api"
+import { api, getToken, setToken, setTokenWithRemember } from "@/lib/api"
 import type { LoginResponse, Role, User } from "@/types"
 
 interface AuthContextValue {
   user: User | null
   role: Role | null
   loading: boolean
-  login: (username: string, password: string) => Promise<LoginResponse>
+  login: (username: string, password: string, remember?: boolean) => Promise<LoginResponse>
   logout: () => void
 }
 
@@ -40,9 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false))
   }, [])
 
-  const login = useCallback(async (username: string, password: string) => {
+  const login = useCallback(async (username: string, password: string, remember = true) => {
     const res = await api.post<LoginResponse>("/auth/login", { username, password })
-    setToken(res.access_token)
+    setTokenWithRemember(res.access_token, remember)
     const me = await api.get<User>("/me")
     setUser(me)
     return res

@@ -341,3 +341,253 @@ export interface ImportHistoryItem {
   status: string
   created_at: string | null
 }
+
+// ---------------------------------------------------------------------------
+// Portal (Samvidha-style academic performance) types
+// ---------------------------------------------------------------------------
+
+export interface PortalProfile {
+  name?: string
+  rollNumber?: string
+  studentId?: string
+  branch?: string
+  regulation?: string
+  section?: string
+  year?: number
+  currentSemester?: number
+  cgpa?: number | null
+  previousSgpa?: number | null
+  previousSemesterCgpa?: number | null
+  dateOfAdmission?: string | null
+}
+
+export interface PortalTheoryCourse {
+  serialNumber?: number
+  courseCode?: string
+  courseName?: string
+  CIE1?: number | null
+  AAT1_I?: number | null
+  AAT1_II?: number | null
+  CIE2?: number | null
+  AAT2_I?: number | null
+  AAT2_II?: number | null
+  totalMarks?: number | null
+  credits?: number
+  grade?: string
+  gradePoint?: number | null
+  status?: string
+  attendance?: number | null
+  courseType?: string
+  courseCategory?: string
+}
+
+export interface PortalLabCourse {
+  serialNumber?: number
+  courseCode?: string
+  courseName?: string
+  week1?: number | null
+  week2?: number | null
+  week3?: number | null
+  week4?: number | null
+  week5?: number | null
+  week6?: number | null
+  week7?: number | null
+  week8?: number | null
+  week9?: number | null
+  week10?: number | null
+  week11?: number | null
+  week12?: number | null
+  week13?: number | null
+  week14?: number | null
+  examMarks?: number | null
+  totalMarks?: number | null
+  credits?: number
+  grade?: string
+  gradePoint?: number | null
+  status?: string
+  attendance?: number | null
+  courseType?: string
+}
+
+export interface PortalAttendanceRow {
+  courseCode?: string
+  courseName?: string
+  courseType?: string
+  courseCategory?: string
+  conducted?: number | null
+  attended?: number | null
+  attendancePercentage?: number | null
+  status?: string
+  band?: string
+}
+
+export interface PortalGradeRecord {
+  courseCode?: string
+  courseName?: string
+  grade?: string
+  gradePoint?: number | null
+  status?: string
+  credits?: number
+  attendancePercentage?: number | null
+}
+
+export interface PortalSemesterSummary {
+  sgpa?: number | null
+  totalCredits?: number
+  earnedCredits?: number
+  semesterNumber?: number
+}
+
+export interface PortalSemesterPerformance {
+  semester: number
+  sgpa: number | null
+  totalCredits: number | null
+  earnedCredits: number | null
+}
+
+export interface PortalCgpaTrendPoint {
+  semester: number
+  label: string
+  sgpa: number | null
+  cgpa: number | null
+  completed: boolean
+}
+
+export interface PortalSubjectRow {
+  semester?: number
+  courseCode?: string
+  courseName?: string
+  courseType?: string
+  courseCategory?: string
+  credits?: number
+  grade?: string
+  gradePoint?: number | null
+  totalMarks?: number | null
+  attendance?: number | null
+  status?: string
+  type?: string
+}
+
+export interface PortalCourseDue {
+  category: string
+  requiredCourseCount: number
+  registeredCourseCount: number
+  yetToBeRegistered: number
+}
+
+export interface PortalStrength {
+  label: string
+  courseCode: string | null
+  courseName: string | null
+  detail: string
+}
+
+export interface PortalRisk {
+  category: string
+  courseCode: string | null
+  courseName: string | null
+  metric: string
+  value: number | null
+  detail: string
+}
+
+export interface PortalInsight {
+  severity: "positive" | "warning" | "neutral"
+  title: string
+  message: string
+}
+
+export interface PortalSummary {
+  profile: PortalProfile
+  placeholder: boolean
+  hero: {
+    name?: string
+    rollNumber?: string
+    section?: string
+    cgpa?: number | null
+    currentSemester?: number
+    currentSemesterLabel?: string
+    performanceIndex?: number
+    attendance?: number | null
+    creditsEarned?: number
+    programTotalCredits?: number
+  }
+  academicOverview: {
+    cgpa?: number | null
+    previousSgpa?: number | null
+    previousSemesterCgpa?: number | null
+    attendance?: number | null
+    creditsEarned?: number
+    performanceIndex?: number
+  }
+  cgpaTrend: PortalCgpaTrendPoint[]
+  semesterPerformance: PortalSemesterPerformance[]
+  attendanceAnalysis: PortalAttendanceRow[]
+  subjects: PortalSubjectRow[]
+  creditProgress: {
+    completedCredits: number
+    remainingCredits: number
+    completionPercent: number
+    programTotalCredits: number
+  }
+  pendingCourses: PortalCourseDue[]
+  currentSemesterCourses: {
+    courseCode?: string
+    courseName?: string
+    courseType?: string
+    courseCategory?: string
+    credits?: number
+    attendance?: number | null
+    status?: string
+  }[]
+  performance: {
+    performanceIndex: number
+    academicScore: number
+    attendanceScore: number | null
+    internalScore: number | null
+    trendScore: number
+    creditCompletion: number
+    breakdown: Record<string, number>
+    weights: Record<string, number>
+  }
+  strengths: PortalStrength[]
+  weaknesses: PortalStrength[]
+  risks: PortalRisk[]
+  insights: PortalInsight[]
+}
+
+export interface PortalSemesterDetail {
+  semester: number
+  semesterLabel: string
+  currentSemester: number | null
+  profile: PortalProfile
+  theoryCourses: PortalTheoryCourse[]
+  labCourses: PortalLabCourse[]
+  attendance: PortalAttendanceRow[]
+  gradeRecords: PortalGradeRecord[]
+  summary: PortalSemesterSummary
+  overallCgpa: number | null
+}
+
+export interface PortalSemesterList {
+  semesters: PortalSemesterPerformance[]
+  currentSemester: number
+}
+
+export interface PortalProfileDetail extends PortalProfile {
+  username: string
+  placeholder: boolean
+  performanceIndex: number
+  creditProgress: {
+    completedCredits: number
+    remainingCredits: number
+    completionPercent: number
+    programTotalCredits: number
+  }
+}
+
+export interface PortalImportResult {
+  imported: boolean
+  created_students: string[]
+  students: number
+}

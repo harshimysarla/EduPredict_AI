@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from app.api import (
     auth, students, predictions, interventions, analytics, datasets,
-    models, notifications, reports, meta, admin,
+    models, notifications, reports, meta, admin, portal,
 )
 from app.core.config import settings
 from app.core.database import Base, engine
@@ -49,6 +49,7 @@ app.include_router(models.router)
 app.include_router(notifications.router)
 app.include_router(reports.router)
 app.include_router(admin.router)
+app.include_router(portal.router)
 
 
 @app.exception_handler(Exception)

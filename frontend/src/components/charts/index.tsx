@@ -15,6 +15,7 @@ import {
   BarChart,
   Bar,
   Legend,
+  ReferenceLine,
 } from "recharts"
 
 export const CHART_COLORS = {
@@ -313,6 +314,99 @@ export function PredictionTrendChart({
           dot={{ r: 4 }}
         />
       </LineChart>
+    </ResponsiveContainer>
+  )
+}
+
+export function CgpaTrendChart({
+  data,
+}: {
+  data: { label: string; sgpa: number | null; cgpa: number | null; completed: boolean }[]
+}) {
+  const points = data.map((d) => ({
+    label: d.completed ? d.label : `${d.label}*`,
+    sgpa: d.completed ? d.sgpa : null,
+    cgpa: d.completed ? d.cgpa : null,
+  }))
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <LineChart data={points} margin={{ top: 8, right: 16, left: -18, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+        <XAxis dataKey="label" tick={axisStyle} />
+        <YAxis domain={[0, 10]} tick={axisStyle} />
+        <Tooltip
+          contentStyle={{
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            fontSize: 12,
+          }}
+        />
+        <Legend />
+        <Line
+          type="monotone"
+          dataKey="sgpa"
+          name="SGPA"
+          stroke={CHART_COLORS.primary}
+          strokeWidth={2.5}
+          connectNulls={false}
+          dot={{ r: 4, fill: CHART_COLORS.primary }}
+        />
+        <Line
+          type="monotone"
+          dataKey="cgpa"
+          name="CGPA"
+          stroke={CHART_COLORS.emerald}
+          strokeWidth={2.5}
+          connectNulls={false}
+          dot={{ r: 4, fill: CHART_COLORS.emerald }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  )
+}
+
+export function AttendanceBarsChart({
+  data,
+}: {
+  data: { courseCode?: string; courseName?: string; attendancePercentage?: number | null }[]
+}) {
+  const chartData = data.map((d) => ({
+    ...d,
+    course: d.courseCode ?? d.courseName ?? "—",
+    attendancePercentage: d.attendancePercentage ?? 0,
+  }))
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <BarChart data={chartData} margin={{ top: 8, right: 16, left: -18, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+        <XAxis dataKey="course" tick={axisStyle} angle={-30} textAnchor="end" interval={0} height={60} />
+        <YAxis domain={[0, 100]} tick={axisStyle} />
+        <Tooltip
+          cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+          contentStyle={{
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            fontSize: 12,
+          }}
+        />
+        <ReferenceLine y={85} stroke={CHART_COLORS.emerald} strokeDasharray="4 4" label={{ value: "85%", fontSize: 10, fill: CHART_COLORS.emerald, position: "insideTopRight" }} />
+        <ReferenceLine y={75} stroke={CHART_COLORS.amber} strokeDasharray="4 4" label={{ value: "75%", fontSize: 10, fill: CHART_COLORS.amber, position: "insideTopRight" }} />
+        <ReferenceLine y={65} stroke={CHART_COLORS.red} strokeDasharray="4 4" label={{ value: "65%", fontSize: 10, fill: CHART_COLORS.red, position: "insideTopRight" }} />
+        <Bar
+          dataKey="attendancePercentage"
+          name="Attendance %"
+          radius={[6, 6, 0, 0]}
+        >
+          {chartData.map((d, i) => {
+            const pct = d.attendancePercentage ?? 0
+            const color =
+              pct >= 85 ? CHART_COLORS.emerald : pct >= 75 ? CHART_COLORS.primary : pct >= 65 ? CHART_COLORS.amber : CHART_COLORS.red
+            return <Cell key={i} fill={color} />
+          })}
+        </Bar>
+      </BarChart>
     </ResponsiveContainer>
   )
 }

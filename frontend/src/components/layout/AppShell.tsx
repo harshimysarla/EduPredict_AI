@@ -70,7 +70,10 @@ const navSections = [
 const studentNavSections = [
   {
     label: "Overview",
-    items: [{ to: "/student", label: "Your Dashboard", icon: LayoutDashboard }],
+    items: [
+      { to: "/student", label: "Your Dashboard", icon: LayoutDashboard },
+      { to: "/student/semesters", label: "Semester Records", icon: FileBarChart2 },
+    ],
   },
   {
     label: "Account",
@@ -244,6 +247,26 @@ function DataSourceBadge() {
   )
 }
 
+function DemoDataBadge() {
+  const { user } = useAuth()
+  const { data } = useQuery({
+    queryKey: ["portal-summary-badge"],
+    queryFn: () => api.get<{ placeholder: boolean }>("/student/me/portal/summary"),
+    enabled: user?.role === "student",
+    refetchInterval: 60000,
+  })
+  if (user?.role !== "student" || !data?.placeholder) return null
+  return (
+    <span
+      className="hidden items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 md:flex"
+      title="This account uses demo (placeholder) academic data"
+    >
+      <Database className="h-3 w-3" />
+      DEMO DATA
+    </span>
+  )
+}
+
 export function AppShell() {
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
@@ -338,6 +361,7 @@ export function AppShell() {
           </button>
           <GlobalSearch />
           <div className="ml-auto flex items-center gap-1.5">
+            <DemoDataBadge />
             <DataSourceBadge />
             <NotificationBell />
             <button

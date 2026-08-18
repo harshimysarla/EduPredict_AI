@@ -103,3 +103,9 @@ def my_faculty_profile(
         "full_name": current_user.full_name,
         "email": current_user.email,
     }
+
+
+@router.get("/mongodb/status")
+def mongodb_status():
+    from app.core.mongodb import check_mongo_status
+    return check_mongo_status()

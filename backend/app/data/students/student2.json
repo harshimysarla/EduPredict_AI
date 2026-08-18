@@ -1,0 +1,192 @@
+{
+  "username": "24951A05C3",
+  "password": "demo123",
+  "studentId": "24951A05C3",
+  "name": "K. VISHNU VARDHAN",
+  "rollNumber": "24951A05C3",
+  "branch": "COMPUTER SCIENCE AND ENGINEERING",
+  "regulation": "BT23",
+  "section": "A",
+  "year": 3,
+  "currentSemester": 5,
+  "cgpa": 8.45,
+  "previousSgpa": 8.20,
+  "previousSemesterCgpa": 8.45,
+  "dateOfAdmission": "2023-08-01",
+  "placeholder": false,
+  "profile": {
+    "name": "K. VISHNU VARDHAN",
+    "rollNumber": "24951A05C3",
+    "studentId": "24951A05C3",
+    "branch": "COMPUTER SCIENCE AND ENGINEERING",
+    "regulation": "BT23",
+    "section": "A",
+    "year": 3,
+    "currentSemester": 5,
+    "cgpa": 8.45,
+    "previousSgpa": 8.20,
+    "previousSemesterCgpa": 8.45,
+    "dateOfAdmission": "2023-08-01"
+  },
+  "semesterRecords": [
+    {
+      "semester": 1,
+      "theoryCourses": [
+        { "serialNumber": 1, "courseCode": "AHSD02", "courseName": "MATRICES AND CALCULUS", "CIE1": 24, "AAT1_I": 8, "AAT1_II": 8, "CIE2": 24, "AAT2_I": 8, "AAT2_II": 8, "totalMarks": 80, "credits": 4, "grade": "A+", "gradePoint": 9, "status": "Completed", "attendance": 84, "courseType": "T", "courseCategory": "FOUNDATION" },
+        { "serialNumber": 2, "courseCode": "AHSD03", "courseName": "ENGINEERING CHEMISTRY", "CIE1": 23, "AAT1_I": 7, "AAT1_II": 8, "CIE2": 23, "AAT2_I": 7, "AAT2_II": 8, "totalMarks": 78, "credits": 3, "grade": "A", "gradePoint": 8, "status": "Completed", "attendance": 82, "courseType": "T", "courseCategory": "FOUNDATION" },
+        { "serialNumber": 3, "courseCode": "AHSD07", "courseName": "APPLIED PHYSICS", "CIE1": 25, "AAT1_I": 8, "AAT1_II": 8, "CIE2": 25, "AAT2_I": 8, "AAT2_II": 8, "totalMarks": 82, "credits": 3, "grade": "A", "gradePoint": 8, "status": "Completed", "attendance": 80, "courseType": "T", "courseCategory": "FOUNDATION" },
+        { "serialNumber": 4, "courseCode": "ACSD01", "courseName": "OBJECT ORIENTED PROGRAMMING", "CIE1": 26, "AAT1_I": 9, "AAT1_II": 9, "CIE2": 26, "AAT2_I": 9, "AAT2_II": 9, "totalMarks": 88, "credits": 3, "grade": "A+", "gradePoint": 9, "status": "Completed", "attendance": 88, "courseType": "T", "courseCategory": "CORE" },
+        { "serialNumber": 5, "courseCode": "AMED03", "courseName": "ENGINEERING GRAPHICS", "CIE1": 22, "AAT1_I": 7, "AAT1_II": 7, "CIE2": 22, "AAT2_I": 7, "AAT2_II": 7, "totalMarks": 72, "credits": 2, "grade": "A", "gradePoint": 8, "status": "Completed", "attendance": 78, "courseType": "T", "courseCategory": "CORE" },
+        { "serialNumber": 6, "courseCode": "ACSD04", "courseName": "MOBILE APPLICATIONS DEVELOPMENT", "CIE1": 25, "AAT1_I": 8, "AAT1_II": 8, "CIE2": 25, "AAT2_I": 8, "AAT2_II": 8, "totalMarks": 82, "credits": 1, "grade": "A", "gradePoint": 8, "status": "Completed", "attendance": 85, "courseType": "T", "courseCategory": "SKILL" },
+        { "serialNumber": 7, "courseCode": "AHSD06", "courseName": "ENVIRONMENTAL SCIENCE", "CIE1": 21, "AAT1_I": 7, "AAT1_II": 7, "CIE2": 21, "AAT2_I": 7, "AAT2_II": 7, "totalMarks": 70, "credits": 0, "grade": "B", "gradePoint": 6, "status": "Completed", "attendance": null, "courseType": "T", "courseCategory": "AUDIT" }
+      ],
+      "labCourses": [
+        { "serialNumber": 8, "courseCode": "AHSD09", "courseName": "APPLIED PHYSICS LABORATORY", "week1": 9, "week2": 9, "week3": 10, "week4": 9, "week5": 9, "week6": 10, "week7": 9, "week8": 9, "week9": 10, "week10": 9, "week11": 9, "week12": 10, "week13": 9, "week14": 9, "examMarks": 45, "totalMarks": 90, "credits": 1, "grade": "S", "gradePoint": 10, "status": "Completed", "attendance": 92 },
+        { "serialNumber": 9, "courseCode": "ACSD02", "courseName": "OBJECT ORIENTED PROGRAMMING WITH JAVA LABORATORY", "week1": 10, "week2": 9, "week3": 10, "week4": 9, "week5": 10, "week6": 9, "week7": 10, "week8": 10, "week9": 9, "week10": 10, "week11": 10, "week12": 9, "week13": 10, "week14": 10, "examMarks": 47, "totalMarks": 94, "credits": 2, "grade": "S", "gradePoint": 10, "status": "Completed", "attendance": 90 },
+        { "serialNumber": 10, "courseCode": "AHSD05", "courseName": "ENGINEERING CHEMISTRY LABORATORY", "week1": 9, "week2": 9, "week3": 9, "week4": 10, "week5": 9, "week6": 9, "week7": 10, "week8": 9, "week9": 9, "week10": 10, "week11": 9, "week12": 9, "week13": 10, "week14": 9, "examMarks": 44, "totalMarks": 88, "credits": 1, "grade": "A+", "gradePoint": 9, "status": "Completed", "attendance": 95 }
+      ],
+      "attendance": [
+        { "courseCode": "AHSD02", "courseName": "MATRICES AND CALCULUS", "courseType": "T", "courseCategory": "FOUNDATION", "conducted": 40, "attended": 34, "attendancePercentage": 85, "status": "Satisfactory" },
+        { "courseCode": "AHSD03", "courseName": "ENGINEERING CHEMISTRY", "courseType": "T", "courseCategory": "FOUNDATION", "conducted": 42, "attended": 34, "attendancePercentage": 80.95, "status": "Satisfactory" },
+        { "courseCode": "AHSD07", "courseName": "APPLIED PHYSICS", "courseType": "T", "courseCategory": "FOUNDATION", "conducted": 38, "attended": 30, "attendancePercentage": 78.95, "status": "Satisfactory" },
+        { "courseCode": "ACSD01", "courseName": "OBJECT ORIENTED PROGRAMMING", "courseType": "T", "courseCategory": "CORE", "conducted": 38, "attended": 33, "attendancePercentage": 86.84, "status": "Satisfactory" },
+        { "courseCode": "AHSD09", "courseName": "APPLIED PHYSICS LABORATORY", "courseType": "L", "courseCategory": "FOUNDATION", "conducted": 20, "attended": 18, "attendancePercentage": 90, "status": "Satisfactory" },
+        { "courseCode": "ACSD02", "courseName": "OBJECT ORIENTED PROGRAMMING WITH JAVA LABORATORY", "courseType": "L", "courseCategory": "CORE", "conducted": 22, "attended": 20, "attendancePercentage": 90.91, "status": "Satisfactory" },
+        { "courseCode": "AHSD05", "courseName": "ENGINEERING CHEMISTRY LABORATORY", "courseType": "L", "courseCategory": "FOUNDATION", "conducted": 20, "attended": 19, "attendancePercentage": 95, "status": "Satisfactory" }
+      ],
+      "gradeRecords": [
+        { "courseCode": "AHSD02", "courseName": "MATRICES AND CALCULUS", "grade": "A+", "gradePoint": 9, "status": "Completed", "credits": 4, "attendancePercentage": 85 },
+        { "courseCode": "AHSD03", "courseName": "ENGINEERING CHEMISTRY", "grade": "A", "gradePoint": 8, "status": "Completed", "credits": 3, "attendancePercentage": 80.95 },
+        { "courseCode": "AHSD07", "courseName": "APPLIED PHYSICS", "grade": "A", "gradePoint": 8, "status": "Completed", "credits": 3, "attendancePercentage": 78.95 },
+        { "courseCode": "ACSD01", "courseName": "OBJECT ORIENTED PROGRAMMING", "grade": "A+", "gradePoint": 9, "status": "Completed", "credits": 3, "attendancePercentage": 86.84 },
+        { "courseCode": "AHSD09", "courseName": "APPLIED PHYSICS LABORATORY", "grade": "S", "gradePoint": 10, "status": "Completed", "credits": 1, "attendancePercentage": 90 },
+        { "courseCode": "ACSD02", "courseName": "OBJECT ORIENTED PROGRAMMING WITH JAVA LABORATORY", "grade": "S", "gradePoint": 10, "status": "Completed", "credits": 2, "attendancePercentage": 90.91 },
+        { "courseCode": "AHSD05", "courseName": "ENGINEERING CHEMISTRY LABORATORY", "grade": "A+", "gradePoint": 9, "status": "Completed", "credits": 1, "attendancePercentage": 95 },
+        { "courseCode": "AMED03", "courseName": "ENGINEERING GRAPHICS", "grade": "A", "gradePoint": 8, "status": "Completed", "credits": 2, "attendancePercentage": 78 },
+        { "courseCode": "ACSD04", "courseName": "MOBILE APPLICATIONS DEVELOPMENT", "grade": "A", "gradePoint": 8, "status": "Completed", "credits": 1, "attendancePercentage": 85 }
+      ],
+      "semesterSummary": { "sgpa": 8.60, "totalCredits": 20, "earnedCredits": 20, "semesterNumber": 1 }
+    },
+    {
+      "semester": 2,
+      "theoryCourses": [
+        { "serialNumber": 1, "courseCode": "AHSD01", "courseName": "PROFESSIONAL COMMUNICATION", "CIE1": 24, "AAT1_I": 8, "AAT1_II": 8, "CIE2": 24, "AAT2_I": 8, "AAT2_II": 8, "totalMarks": 80, "credits": 3, "grade": "A", "gradePoint": 8, "status": "Completed", "attendance": 84, "courseType": "T", "courseCategory": "FOUNDATION" },
+        { "serialNumber": 2, "courseCode": "AHSD08", "courseName": "DIFFERENTIAL EQUATIONS AND VECTOR CALCULUS", "CIE1": 25, "AAT1_I": 8, "AAT1_II": 8, "CIE2": 25, "AAT2_I": 8, "AAT2_II": 8, "totalMarks": 82, "credits": 4, "grade": "A+", "gradePoint": 9, "status": "Completed", "attendance": 82, "courseType": "T", "courseCategory": "FOUNDATION" },
+        { "serialNumber": 3, "courseCode": "ACSD05", "courseName": "ESSENTIALS OF PROBLEM SOLVING", "CIE1": 25, "AAT1_I": 8, "AAT1_II": 8, "CIE2": 25, "AAT2_I": 8, "AAT2_II": 8, "totalMarks": 82, "credits": 3, "grade": "A", "gradePoint": 8, "status": "Completed", "attendance": 85, "courseType": "T", "courseCategory": "CORE" },
+        { "serialNumber": 4, "courseCode": "AEED01", "courseName": "ELEMENTS OF ELECTRICAL AND ELECTRONICS ENGINEERING", "CIE1": 23, "AAT1_I": 7, "AAT1_II": 8, "CIE2": 23, "AAT2_I": 7, "AAT2_II": 8, "totalMarks": 76, "credits": 3, "grade": "A", "gradePoint": 8, "status": "Completed", "attendance": 78, "courseType": "T", "courseCategory": "CORE" },
+        { "serialNumber": 5, "courseCode": "ACSD03", "courseName": "ESSENTIALS OF INNOVATION", "CIE1": 27, "AAT1_I": 9, "AAT1_II": 9, "CIE2": 27, "AAT2_I": 9, "AAT2_II": 9, "totalMarks": 90, "credits": 1, "grade": "S", "gradePoint": 10, "status": "Completed", "attendance": 88, "courseType": "T", "courseCategory": "SKILL" }
+      ],
+      "labCourses": [
+        { "serialNumber": 6, "courseCode": "AHSD04", "courseName": "PROFESSIONAL COMMUNICATION LABORATORY", "week1": 9, "week2": 9, "week3": 9, "week4": 10, "week5": 9, "week6": 9, "week7": 10, "week8": 9, "week9": 9, "week10": 10, "week11": 9, "week12": 9, "week13": 10, "week14": 9, "examMarks": 45, "totalMarks": 89, "credits": 1, "grade": "A+", "gradePoint": 9, "status": "Completed", "attendance": 85 },
+        { "serialNumber": 7, "courseCode": "ACSD06", "courseName": "PROGRAMMING FOR PROBLEM SOLVING LABORATORY", "week1": 10, "week2": 9, "week3": 10, "week4": 9, "week5": 10, "week6": 9, "week7": 10, "week8": 10, "week9": 9, "week10": 10, "week11": 10, "week12": 9, "week13": 10, "week14": 10, "examMarks": 47, "totalMarks": 93, "credits": 2, "grade": "S", "gradePoint": 10, "status": "Completed", "attendance": 88 },
+        { "serialNumber": 8, "courseCode": "AMED02", "courseName": "MANUFACTURING PRACTICE", "week1": 9, "week2": 9, "week3": 9, "week4": 9, "week5": 9, "week6": 9, "week7": 9, "week8": 9, "week9": 9, "week10": 9, "week11": 9, "week12": 9, "week13": 9, "week14": 9, "examMarks": 42, "totalMarks": 82, "credits": 2, "grade": "A", "gradePoint": 8, "status": "Completed", "attendance": 82 },
+        { "serialNumber": 9, "courseCode": "AEED03", "courseName": "ELECTRICAL AND ELECTRONICS ENGINEERING LABORATORY", "week1": 9, "week2": 10, "week3": 9, "week4": 10, "week5": 9, "week6": 10, "week7": 9, "week8": 10, "week9": 9, "week10": 10, "week11": 9, "week12": 10, "week13": 9, "week14": 10, "examMarks": 45, "totalMarks": 90, "credits": 1, "grade": "S", "gradePoint": 10, "status": "Completed", "attendance": 90 }
+      ],
+      "attendance": [
+        { "courseCode": "AHSD01", "courseName": "PROFESSIONAL COMMUNICATION", "courseType": "T", "courseCategory": "FOUNDATION", "conducted": 30, "attended": 25, "attendancePercentage": 83.33, "status": "Satisfactory" },
+        { "courseCode": "AHSD08", "courseName": "DIFFERENTIAL EQUATIONS AND VECTOR CALCULUS", "courseType": "T", "courseCategory": "FOUNDATION", "conducted": 40, "attended": 33, "attendancePercentage": 82.5, "status": "Satisfactory" },
+        { "courseCode": "ACSD05", "courseName": "ESSENTIALS OF PROBLEM SOLVING", "courseType": "T", "courseCategory": "CORE", "conducted": 36, "attended": 31, "attendancePercentage": 86.11, "status": "Satisfactory" },
+        { "courseCode": "AEED01", "courseName": "ELEMENTS OF ELECTRICAL AND ELECTRONICS ENGINEERING", "courseType": "T", "courseCategory": "CORE", "conducted": 70, "attended": 55, "attendancePercentage": 78.57, "status": "Satisfactory" },
+        { "courseCode": "AHSD04", "courseName": "PROFESSIONAL COMMUNICATION LABORATORY", "courseType": "L", "courseCategory": "FOUNDATION", "conducted": 40, "attended": 34, "attendancePercentage": 85, "status": "Satisfactory" },
+        { "courseCode": "ACSD06", "courseName": "PROGRAMMING FOR PROBLEM SOLVING LABORATORY", "courseType": "L", "courseCategory": "CORE", "conducted": 44, "attended": 39, "attendancePercentage": 88.64, "status": "Satisfactory" }
+      ],
+      "gradeRecords": [
+        { "courseCode": "AHSD01", "courseName": "PROFESSIONAL COMMUNICATION", "grade": "A", "gradePoint": 8, "status": "Completed", "credits": 3, "attendancePercentage": 83.33 },
+        { "courseCode": "AHSD08", "courseName": "DIFFERENTIAL EQUATIONS AND VECTOR CALCULUS", "grade": "A+", "gradePoint": 9, "status": "Completed", "credits": 4, "attendancePercentage": 82.5 },
+        { "courseCode": "ACSD05", "courseName": "ESSENTIALS OF PROBLEM SOLVING", "grade": "A", "gradePoint": 8, "status": "Completed", "credits": 3, "attendancePercentage": 86.11 },
+        { "courseCode": "AEED01", "courseName": "ELEMENTS OF ELECTRICAL AND ELECTRONICS ENGINEERING", "grade": "A", "gradePoint": 8, "status": "Completed", "credits": 3, "attendancePercentage": 78.57 },
+        { "courseCode": "AHSD04", "courseName": "PROFESSIONAL COMMUNICATION LABORATORY", "grade": "A+", "gradePoint": 9, "status": "Completed", "credits": 1, "attendancePercentage": 85 },
+        { "courseCode": "ACSD06", "courseName": "PROGRAMMING FOR PROBLEM SOLVING LABORATORY", "grade": "S", "gradePoint": 10, "status": "Completed", "credits": 2, "attendancePercentage": 88.64 },
+        { "courseCode": "AMED02", "courseName": "MANUFACTURING PRACTICE", "grade": "A", "gradePoint": 8, "status": "Completed", "credits": 2, "attendancePercentage": 82 },
+        { "courseCode": "AEED03", "courseName": "ELECTRICAL AND ELECTRONICS ENGINEERING LABORATORY", "grade": "S", "gradePoint": 10, "status": "Completed", "credits": 1, "attendancePercentage": 90 },
+        { "courseCode": "ACSD03", "courseName": "ESSENTIALS OF INNOVATION", "grade": "S", "gradePoint": 10, "status": "Completed", "credits": 1, "attendancePercentage": 88 }
+      ],
+      "semesterSummary": { "sgpa": 8.55, "totalCredits": 20, "earnedCredits": 20, "semesterNumber": 2 }
+    },
+    {
+      "semester": 3,
+      "theoryCourses": [
+        { "serialNumber": 1, "courseCode": "AHSD11", "courseName": "PROBABILITY AND STATISTICS", "CIE1": 24, "AAT1_I": 8, "AAT1_II": 8, "CIE2": 24, "AAT2_I": 8, "AAT2_II": 8, "totalMarks": 78, "credits": 4, "grade": "A", "gradePoint": 8, "status": "Completed", "attendance": 80, "courseType": "T", "courseCategory": "FOUNDATION" },
+        { "serialNumber": 2, "courseCode": "ACSD08", "courseName": "DATA STRUCTURES", "CIE1": 26, "AAT1_I": 9, "AAT1_II": 9, "CIE2": 26, "AAT2_I": 9, "AAT2_II": 9, "totalMarks": 86, "credits": 3, "grade": "A+", "gradePoint": 9, "status": "Completed", "attendance": 84, "courseType": "T", "courseCategory": "CORE" },
+        { "serialNumber": 3, "courseCode": "ACSD09", "courseName": "OPERATING SYSTEMS", "CIE1": 23, "AAT1_I": 7, "AAT1_II": 8, "CIE2": 23, "AAT2_I": 7, "AAT2_II": 8, "totalMarks": 75, "credits": 3, "grade": "A", "gradePoint": 8, "status": "Completed", "attendance": 76, "courseType": "T", "courseCategory": "CORE" },
+        { "serialNumber": 4, "courseCode": "AECD04", "courseName": "COMPUTER SYSTEM ARCHITECTURE", "CIE1": 22, "AAT1_I": 7, "AAT1_II": 7, "CIE2": 22, "AAT2_I": 7, "AAT2_II": 7, "totalMarks": 72, "credits": 3, "grade": "A", "gradePoint": 8, "status": "Completed", "attendance": 75, "courseType": "T", "courseCategory": "CORE" },
+        { "serialNumber": 5, "courseCode": "AITD01", "courseName": "MATHEMATICS FOR COMPUTING", "CIE1": 23, "AAT1_I": 7, "AAT1_II": 8, "CIE2": 23, "AAT2_I": 7, "AAT2_II": 8, "totalMarks": 76, "credits": 3, "grade": "A", "gradePoint": 8, "status": "Completed", "attendance": 78, "courseType": "T", "courseCategory": "FOUNDATION" }
+      ],
+      "labCourses": [
+        { "serialNumber": 6, "courseCode": "ACSD10", "courseName": "OPERATING SYSTEMS LABORATORY", "week1": 9, "week2": 9, "week3": 9, "week4": 10, "week5": 9, "week6": 9, "week7": 10, "week8": 9, "week9": 9, "week10": 10, "week11": 9, "week12": 9, "week13": 10, "week14": 9, "examMarks": 44, "totalMarks": 88, "credits": 1, "grade": "A+", "gradePoint": 9, "status": "Completed", "attendance": 84 },
+        { "serialNumber": 7, "courseCode": "ACSD11", "courseName": "DATA STRUCTURES LABORATORY", "week1": 9, "week2": 10, "week3": 9, "week4": 9, "week5": 10, "week6": 9, "week7": 9, "week8": 10, "week9": 9, "week10": 9, "week11": 10, "week12": 9, "week13": 9, "week14": 10, "examMarks": 45, "totalMarks": 89, "credits": 1, "grade": "A+", "gradePoint": 9, "status": "Completed", "attendance": 86 },
+        { "serialNumber": 8, "courseCode": "AITD02", "courseName": "PROGRAMMING WITH OBJECTS LABORATORY", "week1": 9, "week2": 9, "week3": 9, "week4": 9, "week5": 9, "week6": 9, "week7": 9, "week8": 9, "week9": 9, "week10": 9, "week11": 9, "week12": 9, "week13": 9, "week14": 9, "examMarks": 42, "totalMarks": 83, "credits": 1, "grade": "A", "gradePoint": 8, "status": "Completed", "attendance": 82 },
+        { "serialNumber": 9, "courseCode": "ACSD12", "courseName": "PROTOTYPE AND DESIGN BUILDING", "week1": 9, "week2": 10, "week3": 9, "week4": 10, "week5": 9, "week6": 10, "week7": 9, "week8": 10, "week9": 9, "week10": 10, "week11": 9, "week12": 10, "week13": 9, "week14": 10, "examMarks": 46, "totalMarks": 91, "credits": 1, "grade": "S", "gradePoint": 10, "status": "Completed", "attendance": 88 }
+      ],
+      "attendance": [
+        { "courseCode": "AHSD11", "courseName": "PROBABILITY AND STATISTICS", "courseType": "T", "courseCategory": "FOUNDATION", "conducted": 36, "attended": 29, "attendancePercentage": 80.56, "status": "Satisfactory" },
+        { "courseCode": "ACSD08", "courseName": "DATA STRUCTURES", "courseType": "T", "courseCategory": "CORE", "conducted": 45, "attended": 38, "attendancePercentage": 84.44, "status": "Satisfactory" },
+        { "courseCode": "ACSD09", "courseName": "OPERATING SYSTEMS", "courseType": "T", "courseCategory": "CORE", "conducted": 34, "attended": 26, "attendancePercentage": 76.47, "status": "Satisfactory" },
+        { "courseCode": "AECD04", "courseName": "COMPUTER SYSTEM ARCHITECTURE", "courseType": "T", "courseCategory": "CORE", "conducted": 88, "attended": 66, "attendancePercentage": 75, "status": "Satisfactory" },
+        { "courseCode": "AITD01", "courseName": "MATHEMATICS FOR COMPUTING", "courseType": "T", "courseCategory": "FOUNDATION", "conducted": 40, "attended": 31, "attendancePercentage": 77.5, "status": "Satisfactory" }
+      ],
+      "gradeRecords": [
+        { "courseCode": "AHSD11", "courseName": "PROBABILITY AND STATISTICS", "grade": "A", "gradePoint": 8, "status": "Completed", "credits": 4, "attendancePercentage": 80.56 },
+        { "courseCode": "ACSD08", "courseName": "DATA STRUCTURES", "grade": "A+", "gradePoint": 9, "status": "Completed", "credits": 3, "attendancePercentage": 84.44 },
+        { "courseCode": "ACSD09", "courseName": "OPERATING SYSTEMS", "grade": "A", "gradePoint": 8, "status": "Completed", "credits": 3, "attendancePercentage": 76.47 },
+        { "courseCode": "AECD04", "courseName": "COMPUTER SYSTEM ARCHITECTURE", "grade": "A", "gradePoint": 8, "status": "Completed", "credits": 3, "attendancePercentage": 75 },
+        { "courseCode": "AITD01", "courseName": "MATHEMATICS FOR COMPUTING", "grade": "A", "gradePoint": 8, "status": "Completed", "credits": 3, "attendancePercentage": 77.5 },
+        { "courseCode": "ACSD10", "courseName": "OPERATING SYSTEMS LABORATORY", "grade": "A+", "gradePoint": 9, "status": "Completed", "credits": 1, "attendancePercentage": 84 },
+        { "courseCode": "ACSD11", "courseName": "DATA STRUCTURES LABORATORY", "grade": "A+", "gradePoint": 9, "status": "Completed", "credits": 1, "attendancePercentage": 86 },
+        { "courseCode": "AITD02", "courseName": "PROGRAMMING WITH OBJECTS LABORATORY", "grade": "A", "gradePoint": 8, "status": "Completed", "credits": 1, "attendancePercentage": 82 },
+        { "courseCode": "ACSD12", "courseName": "PROTOTYPE AND DESIGN BUILDING", "grade": "S", "gradePoint": 10, "status": "Completed", "credits": 1, "attendancePercentage": 88 }
+      ],
+      "semesterSummary": { "sgpa": 8.20, "totalCredits": 20, "earnedCredits": 20, "semesterNumber": 3 }
+    },
+    {
+      "semester": 4,
+      "theoryCourses": [
+        { "serialNumber": 1, "courseCode": "ACSD13", "courseName": "DESIGN AND ANALYSIS OF ALGORITHMS", "CIE1": 24, "AAT1_I": 8, "AAT1_II": 8, "CIE2": 24, "AAT2_I": 8, "AAT2_II": 8, "totalMarks": 80, "credits": 3, "grade": "-", "gradePoint": null, "status": "In Progress", "attendance": 84, "courseType": "T", "courseCategory": "CORE" },
+        { "serialNumber": 2, "courseCode": "ACSD14", "courseName": "WEB SYSTEMS ENGINEERING", "CIE1": 25, "AAT1_I": 8, "AAT1_II": 8, "CIE2": 25, "AAT2_I": 8, "AAT2_II": 8, "totalMarks": 82, "credits": 3, "grade": "-", "gradePoint": null, "status": "In Progress", "attendance": 88, "courseType": "T", "courseCategory": "CORE" }
+      ],
+      "labCourses": [],
+      "attendance": [],
+      "gradeRecords": [],
+      "semesterSummary": { "sgpa": null, "totalCredits": 21, "earnedCredits": 0, "semesterNumber": 4 }
+    },
+    {
+      "semester": 5,
+      "theoryCourses": [
+        { "serialNumber": 1, "courseCode": "ACSD19", "courseName": "DATA MINING AND MACHINE LEARNING", "credits": 4, "grade": "-", "status": "Registered", "attendance": 81.5, "courseType": "T", "courseCategory": "CORE" },
+        { "serialNumber": 2, "courseCode": "ACCD04", "courseName": "INFORMATION SECURITY MANAGEMENT", "credits": 3, "grade": "-", "status": "Registered", "attendance": 85.0, "courseType": "T", "courseCategory": "CORE" },
+        { "serialNumber": 3, "courseCode": "ACSD20", "courseName": "CLOUD APPLICATION DEVELOPMENT", "credits": 3, "grade": "-", "status": "Registered", "attendance": 89.2, "courseType": "T", "courseCategory": "CORE" }
+      ],
+      "labCourses": [],
+      "attendance": [
+        { "courseCode": "ACSD19", "courseName": "DATA MINING AND MACHINE LEARNING", "courseType": "T", "courseCategory": "CORE", "conducted": 28, "attended": 23, "attendancePercentage": 82.14, "status": "Satisfactory" },
+        { "courseCode": "ACCD04", "courseName": "INFORMATION SECURITY MANAGEMENT", "courseType": "T", "courseCategory": "CORE", "conducted": 26, "attended": 22, "attendancePercentage": 84.62, "status": "Satisfactory" },
+        { "courseCode": "ACSD20", "courseName": "CLOUD APPLICATION DEVELOPMENT", "courseType": "T", "courseCategory": "CORE", "conducted": 25, "attended": 23, "attendancePercentage": 92.0, "status": "Satisfactory" }
+      ],
+      "gradeRecords": [],
+      "semesterSummary": { "sgpa": null, "totalCredits": 22, "earnedCredits": 0, "semesterNumber": 5 }
+    }
+  ],
+  "overallSummary": {
+    "cgpa": 8.45,
+    "totalCredits": 60,
+    "earnedCredits": 60,
+    "programTotalCredits": 160,
+    "currentSemester": 5
+  },
+  "currentSemesterCourses": [
+    { "courseCode": "ACSD19", "courseName": "DATA MINING AND MACHINE LEARNING", "courseType": "T", "courseCategory": "CORE", "credits": 4, "attendance": 82.14, "status": "Satisfactory" },
+    { "courseCode": "ACCD04", "courseName": "INFORMATION SECURITY MANAGEMENT", "courseType": "T", "courseCategory": "CORE", "credits": 3, "attendance": 84.62, "status": "Satisfactory" },
+    { "courseCode": "ACSD20", "courseName": "CLOUD APPLICATION DEVELOPMENT", "courseType": "T", "courseCategory": "CORE", "credits": 3, "attendance": 92.0, "status": "Satisfactory" }
+  ],
+  "coursesDue": [
+    { "category": "FOUNDATION", "requiredCourseCount": 12, "registeredCourseCount": 12, "yetToBeRegistered": 0 },
+    { "category": "CORE", "requiredCourseCount": 30, "registeredCourseCount": 26, "yetToBeRegistered": 4 },
+    { "category": "PROFESSIONAL ELECTIVE", "requiredCourseCount": 4, "registeredCourseCount": 2, "yetToBeRegistered": 2 },
+    { "category": "OPEN ELECTIVE", "requiredCourseCount": 2, "registeredCourseCount": 1, "yetToBeRegistered": 1 },
+    { "category": "PROJECT WORK", "requiredCourseCount": 2, "registeredCourseCount": 1, "yetToBeRegistered": 1 },
+    { "category": "AUDIT", "requiredCourseCount": 3, "registeredCourseCount": 3, "yetToBeRegistered": 0 },
+    { "category": "VALUE ADDED", "requiredCourseCount": 2, "registeredCourseCount": 2, "yetToBeRegistered": 0 },
+    { "category": "FIELD PROJECT / INTERNSHIP", "requiredCourseCount": 2, "registeredCourseCount": 1, "yetToBeRegistered": 1 },
+    { "category": "DIP COURSES", "requiredCourseCount": 0, "registeredCourseCount": 0, "yetToBeRegistered": 0 }
+  ]
+}

@@ -111,6 +111,8 @@ export default function Dataset() {
 
       <AcademicImport />
 
+      <PortalImport />
+
       {/* Upload zone */}
       <Card
         className={dragOver ? "border-dashed border-2 border-[var(--primary)]" : ""}
@@ -476,5 +478,85 @@ function AcademicImport() {
         )}
       </CardContent>
     </Card>
+  )
+}
+
+function PortalImport() {
+  const queryClient = useQueryClient()
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [result, setResult] = useState<{ created_students: string[]; students: number } | null>(null)
+
+  const importPortal = useMutation({
+    mutationFn: (f: File) => portalAdminImport(f),
+    onSuccess: (res) => {
+      setResult(res)
+      toast.success(`Portal import complete: ${res.students} student(s), ${res.created_students.length} new`)
+      queryClient.invalidateQueries({ queryKey: ["data-source"] })
+      queryClient.invalidateQueries({ queryKey: ["data-sources"] })
+      queryClient.invalidateQueries({ queryKey: ["datasets"] })
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Portal import failed"),
+  })
+
+  const pick = (f: File | undefined) => {
+    if (!f) return
+    if (!f.name.endsWith(".csv")) {
+      toast.error("Only CSV files are supported")
+      return
+    }
+    setResult(null)
+    importPortal.mutate(f)
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Table2 className="h-4 w-4 text-sky-500" /> Import Portal Academic Data (Samvidha-style)
+        </CardTitle>
+        <CardDescription>
+          Load student portal datasets (courses, grades, attendance, SGPA/CGPA) into the student
+          portal. One row per course, with profile columns repeated on every row. Required columns:
+          username, password, name, rollNumber, branch, regulation, section, year, currentSemester,
+          cgpa, semester, courseCode, courseName, courseType (T/L), credits, grade, gradePoint, status,
+          attendance. Optional theory columns: cie1, aat1_i, aat1_ii, cie2, aat2_i, aat2_ii, totalMarks;
+          optional lab columns: week1..week14, examMarks, totalMarks.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={(e) => pick(e.target.files?.[0])}
+          />
+          <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={importPortal.isPending}>
+            {importPortal.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {importPortal.isPending ? "Importing…" : "Choose portal CSV"}
+          </Button>
+          {result && (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <Badge variant="success">{result.students} students imported</Badge>
+              {result.created_students.length > 0 && (
+                <span className="text-[var(--muted-foreground)]">
+                  New accounts: {result.created_students.join(", ")}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function portalAdminImport(file: File) {
+  const fd = new FormData()
+  fd.append("file", file)
+  return api.upload<{ imported: boolean; created_students: string[]; students: number }>(
+    "/admin/portal/import",
+    fd,
   )
 }

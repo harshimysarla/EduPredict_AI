@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
     MODEL_PATH: str = "./models"
     RANDOM_SEED: int = 42
+    MONGODB_URI: str = "mongodb://localhost:27017"
+    MONGODB_DB_NAME: str = "edupredict_ai"
     # Future official IARE/Samvidha integration (leave empty; NOT used today)
     SAMVIDHA_API_BASE_URL: str = ""
     SAMVIDHA_CLIENT_ID: str = ""

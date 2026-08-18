@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom"
+import { useQuery } from "@tanstack/react-query"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Toaster } from "sonner"
 import { AuthProvider, useAuth } from "@/context/AuthContext"
@@ -6,6 +7,7 @@ import { ThemeProvider } from "@/context/ThemeContext"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { PageLoader } from "@/components/ui/spinner"
 import { AppShell } from "@/components/layout/AppShell"
+import { portalService } from "@/services/portalService"
 import Login from "@/pages/Login"
 import Dashboard from "@/pages/Dashboard"
 import Students from "@/pages/Students"
@@ -19,6 +21,7 @@ import Reports from "@/pages/Reports"
 import Settings from "@/pages/Settings"
 import Profile from "@/pages/Profile"
 import StudentDashboard from "@/pages/StudentDashboard"
+import SemesterDetails from "@/pages/SemesterDetails"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,6 +46,12 @@ function RedirectIfAuthed() {
   if (loading) return <PageLoader />
   if (user) return <Navigate to={user.role === "student" ? "/student" : "/dashboard"} replace />
   return <Outlet />
+}
+
+function SemesterRedirect() {
+  const { data } = useQuery({ queryKey: ["portal-semesters-redirect"], queryFn: portalService.semesters })
+  if (!data) return <PageLoader />
+  return <Navigate to={`/student/semesters/${data.currentSemester || 1}`} replace />
 }
 
 function AppRoutes() {
@@ -72,6 +81,8 @@ function AppRoutes() {
         <Route element={<Protected roles={["student"]} />}>
           <Route element={<AppShell />}>
             <Route path="/student" element={<StudentDashboard />} />
+            <Route path="/student/semesters" element={<SemesterRedirect />} />
+            <Route path="/student/semesters/:sem" element={<SemesterDetails />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
           </Route>

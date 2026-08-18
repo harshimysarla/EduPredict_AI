@@ -1,12 +1,11 @@
 """Seed the EduPredict AI database with demo data.
 
 What is created:
-  * 3 dedicated demo students with CONTRASTING risk profiles:
-      student01 -> 24951A05B1 (LOW risk)
-      student02 -> 24951A05B2 (MODERATE risk)
-      student03 -> 24951A05B3 (HIGH risk)
-    Each has its own academic records, assessments, assignments, attendance,
-    engagement, prediction history and interventions.
+  * 4 portal student accounts (login by roll number as username, password
+    demo123) with full Samvidha-style academic portal data seeded from
+    backend/app/data/students/*.json: 24951A05B1 (DEMO STUDENT TWO),
+    24951A05B2 (DEMO STUDENT THREE), 24951A05B3 (MYSARLA HARSHITH),
+    24951A05B4 (DEMO STUDENT FOUR).
   * 260 additional students (usernames student001..student260) covering all
     departments with realistic variation (high/moderate/low risk).
   * Admin + faculty accounts per department.
@@ -20,6 +19,7 @@ presented as real IARE student data. Login is by username + password.
 import os
 import random
 import sys
+import json
 from datetime import datetime, timedelta
 
 _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -278,63 +278,42 @@ def seed(db: Session):
         db.flush()
         return prob
 
-    # --- Dedicated demo students: student01 / student02 / student03 ---------------
-    # Feature sets are hand-picked so the DOCUMENTED risk formula
-    # (sigmoid(-2.25*perf - 0.7 + noise), weights & z-scores in
-    # backend/app/ml/dataset_generator.py) yields LOW / MODERATE / HIGH risk,
-    # and the raw numbers look plausible for each profile.
-    demo_profiles = [
-        ("student01", "Aarav Sharma", "24951A05B1",
-         dict(attendance=90.0, previous_performance=85.0, internal_marks=88.0,
-              assignment_score=90.0, engagement=85.0, study_hours=6.0)),
-        ("student02", "Riya Verma", "24951A05B2",
-         dict(attendance=74.0, previous_performance=62.0, internal_marks=60.0,
-              assignment_score=65.0, engagement=60.0, study_hours=4.5)),
-        ("student03", "Karan Reddy", "24951A05B3",
-         dict(attendance=52.0, previous_performance=48.0, internal_marks=45.0,
-              assignment_score=50.0, engagement=40.0, study_hours=3.0)),
-    ]
-    for username, full_name, sid, feats in demo_profiles:
-        existing = db.query(Student).filter(Student.student_id == sid).first()
-        if existing:
+    # --- Portal students (Samvidha-style academic portal demo accounts) ---------
+    # 4 local student accounts whose portal data (grades, attendance, SGPA, CGPA,
+    # courses due) is seeded from backend/app/data/students/*.json. Login is by
+    # roll number as username (password demo123). These replace the old demo trio
+    # (student01/02/03) and own student ids 24951A05B1..B4.
+    from app.models import PortalDataset
+    from app.data.students import PORTAL_DATASETS
+    for ds in PORTAL_DATASETS:
+        sid = ds.get("rollNumber") or ds.get("studentId")
+        if not sid:
             continue
-        user = create_user(db, username, STUDENT_PASSWORD, full_name, UserRole.STUDENT,
-                           email=f"{username}@student.edupredict.local")
+        if db.query(Student).filter(Student.student_id == sid).first():
+            continue
+        profile = ds.get("profile") or {}
+        name = profile.get("name") or ds.get("name") or sid
+        username = str(sid).lower()
+        if db.query(User).filter(User.username == username).first():
+            continue
+        cse_dept = departments.get("CSE")
+        sec_name = f"CSE-{profile.get('section') or 'A'}"
+        section = next(
+            (s for s in main_sections
+             if s.department_id == cse_dept.id and s.name == sec_name),
+            main_sections[0],
+        )
+        year = int(profile.get("year") or 1)
+        cur_sem = int(profile.get("currentSemester") or ds.get("currentSemester") or 1)
+        user = create_user(db, username, "demo123", name, UserRole.STUDENT)
         student = Student(
-            user_id=user.id, student_id=sid, section_id=main_sections[0].id,
-            admission_year=2024, current_semester=1,
+            user_id=user.id, student_id=sid, section_id=section.id,
+            admission_year=2026 - year, current_semester=cur_sem,
         )
         db.add(student)
         db.flush()
-        student_records(student, feats, semester_offsets=(1, 2))
-
-        prob = compute_risk_probability(dict(feats), rng)
-        # history so the risk trend chart is meaningful
-        add_prediction(student, prob - 0.16, 32)
-        add_prediction(student, prob - 0.08, 16)
-        add_prediction(student, prob, 2)
-
-        if prob > 0.6:
-            fp = db.query(FacultyProfile).filter(FacultyProfile.employee_id == "EMPCSE").first()
-            db.add(Intervention(
-                student_id=student.id, faculty_id=fp.id, type=InterventionType.ACADEMIC_COUNSELLING,
-                title="Academic counselling session",
-                description=f"Flagged at {prob - 0.16:.0%} risk; counselling scheduled to improve attendance and internal marks.",
-                status=InterventionStatus.COMPLETED,
-                assigned_date=datetime.utcnow() - timedelta(days=18),
-                follow_up_date=datetime.utcnow() - timedelta(days=4),
-                completed_date=datetime.utcnow() - timedelta(days=5),
-                notes="Weekly attendance and internal-mark monitoring.",
-            ))
-            db.add(Intervention(
-                student_id=student.id, faculty_id=fp.id, type=InterventionType.MENTORING,
-                title="Mentoring for subject support",
-                description="Mentoring sessions on weak subjects.",
-                status=InterventionStatus.IN_PROGRESS,
-                assigned_date=datetime.utcnow() - timedelta(days=6),
-                follow_up_date=datetime.utcnow() + timedelta(days=7),
-            ))
-        print(f"  Created demo student ({username} / {STUDENT_PASSWORD} -> {sid})")
+        db.add(PortalDataset(student_id=student.id, data=json.dumps(ds)))
+        print(f"  Created portal demo student ({username} / demo123 -> {sid})")
 
     # --- Bulk students ------------------------------------------------------------
     students_created = 0
