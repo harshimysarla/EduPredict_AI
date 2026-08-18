@@ -1,92 +1,68 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
-from typing import Optional
 import os
 import tempfile
 
-_BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_REPO = os.path.dirname(_BASE)
+# ── resolve writable dirs ──────────────────────────────────────────
+_IS_LINUX = (os.name != "nt")
+_TMP = tempfile.gettempdir()
+
+_DEFAULT_DB = (
+    f"sqlite:///{_TMP}/edupredict.db" if _IS_LINUX else "sqlite:///./edupredict.db"
+)
+_DEFAULT_MODELS = os.path.join(_TMP, "models") if _IS_LINUX else "./models"
+_ATLAS_URI = (
+    "mongodb+srv://harshimysarla_db_user:vggZGd2D2d1Y7kbM"
+    "@cluster0.mcqyqtp.mongodb.net/edupredict_ai"
+    "?retryWrites=true&w=majority&appName=Cluster0"
+)
 
 
-def _find_env() -> str:
-    candidates = [
-        os.path.join(_REPO, ".env"),
-        os.path.join(_BASE, ".env"),
-        os.path.join(os.getcwd(), ".env"),
-    ]
-    for c in candidates:
-        if os.path.exists(c):
-            return c
-    return os.path.join(_BASE, ".env")
+def _int_env(name: str, default: int) -> int:
+    """Read an env var as int; return default when missing or empty."""
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
 
 
-def _get_default_database_url() -> str:
-    if os.name != "nt":
-        return f"sqlite:///{os.path.join(tempfile.gettempdir(), 'edupredict.db')}"
-    return "sqlite:///./edupredict.db"
+def _str_env(name: str, default: str) -> str:
+    """Read an env var as str; return default when missing or empty."""
+    raw = os.environ.get(name, "").strip()
+    return raw if raw else default
 
 
-def _get_default_model_path() -> str:
-    if os.name != "nt":
-        return os.path.join(tempfile.gettempdir(), "models")
-    return "./models"
+def _db_url() -> str:
+    """
+    Return a usable DATABASE_URL.
+    If the configured URL points to localhost/127.0.0.1 or is empty,
+    fall back to SQLite (safe for Vercel serverless).
+    """
+    raw = _str_env("DATABASE_URL", _DEFAULT_DB)
+    if "localhost" in raw or "127.0.0.1" in raw:
+        return _DEFAULT_DB
+    return raw
 
 
-# Defaults for integer fields — used when env var is set to empty string
-_INT_DEFAULTS = {
-    "ACCESS_TOKEN_EXPIRE_MINUTES": 60,
-    "RANDOM_SEED": 42,
-}
+class _Settings:
+    """Lightweight settings object — no pydantic, no .env loading on Vercel."""
 
-# Defaults for string fields — used when env var is set to empty string
-_STR_DEFAULTS = {
-    "DATABASE_URL": _get_default_database_url(),
-    "SECRET_KEY": "edupredict-ai-production-super-secret-key-2026-secure-32chars",
-    "ALGORITHM": "HS256",
-    "FRONTEND_URL": "http://localhost:5173",
-    "MODEL_PATH": _get_default_model_path(),
-    "MONGODB_URI": "mongodb+srv://harshimysarla_db_user:vggZGd2D2d1Y7kbM@cluster0.mcqyqtp.mongodb.net/edupredict_ai?retryWrites=true&w=majority&appName=Cluster0",
-    "MONGODB_DB_NAME": "edupredict_ai",
-}
-
-
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=_find_env(),
-        case_sensitive=True,
-        extra="ignore",
+    DATABASE_URL: str = _db_url()
+    SECRET_KEY: str = _str_env(
+        "SECRET_KEY",
+        "edupredict-ai-production-super-secret-key-2026-secure-32chars",
     )
-
-    DATABASE_URL: str = _STR_DEFAULTS["DATABASE_URL"]
-    SECRET_KEY: str = _STR_DEFAULTS["SECRET_KEY"]
-    ALGORITHM: str = _STR_DEFAULTS["ALGORITHM"]
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = _INT_DEFAULTS["ACCESS_TOKEN_EXPIRE_MINUTES"]
-    FRONTEND_URL: str = _STR_DEFAULTS["FRONTEND_URL"]
-    MODEL_PATH: str = _STR_DEFAULTS["MODEL_PATH"]
-    RANDOM_SEED: int = _INT_DEFAULTS["RANDOM_SEED"]
-    MONGODB_URI: str = _STR_DEFAULTS["MONGODB_URI"]
-    MONGODB_DB_NAME: str = _STR_DEFAULTS["MONGODB_DB_NAME"]
-    SAMVIDHA_API_BASE_URL: str = ""
-    SAMVIDHA_CLIENT_ID: str = ""
-    SAMVIDHA_CLIENT_SECRET: str = ""
-
-    @field_validator("ACCESS_TOKEN_EXPIRE_MINUTES", "RANDOM_SEED", mode="before")
-    @classmethod
-    def empty_str_to_default_int(cls, v, info):
-        if v is None or (isinstance(v, str) and v.strip() == ""):
-            return _INT_DEFAULTS.get(info.field_name, 0)
-        return v
-
-    @field_validator(
-        "DATABASE_URL", "SECRET_KEY", "ALGORITHM", "FRONTEND_URL",
-        "MODEL_PATH", "MONGODB_URI", "MONGODB_DB_NAME",
-        mode="before",
-    )
-    @classmethod
-    def empty_str_to_default_str(cls, v, info):
-        if isinstance(v, str) and v.strip() == "" and info.field_name in _STR_DEFAULTS:
-            return _STR_DEFAULTS[info.field_name]
-        return v
+    ALGORITHM: str = _str_env("ALGORITHM", "HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = _int_env("ACCESS_TOKEN_EXPIRE_MINUTES", 60)
+    FRONTEND_URL: str = _str_env("FRONTEND_URL", "*")
+    MODEL_PATH: str = _str_env("MODEL_PATH", _DEFAULT_MODELS)
+    RANDOM_SEED: int = _int_env("RANDOM_SEED", 42)
+    MONGODB_URI: str = _str_env("MONGODB_URI", _ATLAS_URI)
+    MONGODB_DB_NAME: str = _str_env("MONGODB_DB_NAME", "edupredict_ai")
+    SAMVIDHA_API_BASE_URL: str = _str_env("SAMVIDHA_API_BASE_URL", "")
+    SAMVIDHA_CLIENT_ID: str = _str_env("SAMVIDHA_CLIENT_ID", "")
+    SAMVIDHA_CLIENT_SECRET: str = _str_env("SAMVIDHA_CLIENT_SECRET", "")
 
 
-settings = Settings()
+settings = _Settings()
