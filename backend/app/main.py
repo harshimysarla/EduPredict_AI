@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     try:
         init_db()
     except Exception as exc:
-        logger.exception("Database init warning during startup: %s", exc)
+        logger.warning("Database init warning during startup: %s", exc)
     yield
     logger.info("Shutting down EduPredict AI backend")
 
@@ -49,13 +49,19 @@ ROUTERS = [
     notifications.router, reports.router, admin.router, portal.router,
 ]
 
-# 1. Mount under /api prefix for /api/... calls
+# 1. Mount under /api prefix for /api/... calls (standard Vite proxy / Vercel rewrite)
 api_router = APIRouter(prefix="/api")
 for r in ROUTERS:
     api_router.include_router(r)
 app.include_router(api_router)
 
-# 2. Also mount at root for direct /auth, /students, etc.
+# 2. Also mount under /api/index.py in case Vercel rewrites preserve the full entrypoint file path
+api_index_router = APIRouter(prefix="/api/index.py")
+for r in ROUTERS:
+    api_index_router.include_router(r)
+app.include_router(api_index_router)
+
+# 3. Also mount at root for direct /auth, /students, etc.
 for r in ROUTERS:
     app.include_router(r)
 
@@ -71,12 +77,14 @@ async def unhandled_exception_handler(request, exc):
 
 @app.get("/")
 @app.get("/api")
+@app.get("/api/index.py")
 def root():
     return {"app": "EduPredict AI", "status": "running", "docs": "/docs"}
 
 
 @app.get("/health")
 @app.get("/api/health")
+@app.get("/api/index.py/health")
 def health():
     from app.core.mongodb import check_mongo_status
     return {
