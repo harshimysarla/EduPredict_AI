@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 import os
+import tempfile
 
 _BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _REPO = os.path.dirname(_BASE)
@@ -19,10 +20,15 @@ def _find_env() -> str:
 
 
 def _get_default_database_url() -> str:
-    # If running on Vercel / serverless environment without external DB, use /tmp SQLite
-    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
-        return "sqlite:////tmp/edupredict.db"
+    if os.name != "nt":
+        return f"sqlite:///{os.path.join(tempfile.gettempdir(), 'edupredict.db')}"
     return "sqlite:///./edupredict.db"
+
+
+def _get_default_model_path() -> str:
+    if os.name != "nt":
+        return os.path.join(tempfile.gettempdir(), "models")
+    return "./models"
 
 
 class Settings(BaseSettings):
@@ -37,7 +43,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     FRONTEND_URL: str = "http://localhost:5173"
-    MODEL_PATH: str = "./models"
+    MODEL_PATH: str = _get_default_model_path()
     RANDOM_SEED: int = 42
     MONGODB_URI: str = "mongodb+srv://harshimysarla_db_user:vggZGd2D2d1Y7kbM@cluster0.mcqyqtp.mongodb.net/edupredict_ai?retryWrites=true&w=majority&appName=Cluster0"
     MONGODB_DB_NAME: str = "edupredict_ai"

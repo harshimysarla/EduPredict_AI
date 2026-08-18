@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import tempfile
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
@@ -12,26 +13,25 @@ Base = declarative_base()
 
 def _build_engine():
     db_url = settings.DATABASE_URL
-    is_serverless = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+    is_linux = (os.name != "nt")
 
-    # If in serverless and pointing to localhost, fallback to SQLite in /tmp
-    if is_serverless and ("localhost" in db_url or "127.0.0.1" in db_url):
-        logger.warning("Localhost DATABASE_URL detected on serverless. Falling back to SQLite /tmp/edupredict.db")
-        db_url = "sqlite:////tmp/edupredict.db"
+    # On Linux/Lambda/Vercel serverless environments:
+    # If using SQLite or pointing to localhost, always force /tmp/edupredict.db
+    if is_linux and (db_url.startswith("sqlite") or "localhost" in db_url or "127.0.0.1" in db_url):
+        db_url = f"sqlite:///{os.path.join(tempfile.gettempdir(), 'edupredict.db')}"
 
     if db_url.startswith("sqlite"):
         return create_engine(db_url, connect_args={"check_same_thread": False})
     
     try:
         eng = create_engine(db_url, pool_pre_ping=True)
-        # Test connection quickly
         with eng.connect() as conn:
             conn.execute(text("SELECT 1"))
         return eng
     except Exception as exc:
-        logger.warning("Failed to connect to %s (%s). Falling back to SQLite.", db_url, exc)
-        fallback_path = "/tmp/edupredict.db" if is_serverless else "./edupredict.db"
-        return create_engine(f"sqlite:///{fallback_path}", connect_args={"check_same_thread": False})
+        logger.warning("Failed to connect to %s (%s). Falling back to SQLite in /tmp.", db_url, exc)
+        fallback = f"sqlite:///{os.path.join(tempfile.gettempdir(), 'edupredict.db')}" if is_linux else "sqlite:///./edupredict.db"
+        return create_engine(fallback, connect_args={"check_same_thread": False})
 
 
 engine = _build_engine()

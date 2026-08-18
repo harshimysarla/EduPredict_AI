@@ -15,4 +15,5 @@ try:
 except Exception:
     pass
 
-__all__ = ["app"]
+handler = app
+__all__ = ["app", "handler"]
