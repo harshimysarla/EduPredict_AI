@@ -6,10 +6,10 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, get_faculty_or_admin
 from app.models import (
     User, UserRole, Student, Intervention, InterventionStatus,
-    InterventionType, FacultyProfile,
+    InterventionType, FacultyProfile, Section,
 )
 from app.schemas import InterventionCreate, InterventionUpdate, InterventionOut
-from app.services.base import serialize_intervention
+from app.services.base import serialize_intervention, faculty_scope_filter
 
 router = APIRouter(prefix="/interventions", tags=["interventions"])
 
@@ -21,6 +21,17 @@ def _faculty_for_user(db: Session, user: User):
     return faculty
 
 
+def _check_student_access(db: Session, student: Student, current_user: User) -> None:
+    """Faculty/admins may only manage students within their authorized scope."""
+    if current_user.role == UserRole.ADMIN:
+        return
+    faculty = db.query(FacultyProfile).filter(FacultyProfile.user_id == current_user.id).first()
+    if faculty is None:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if student.section is None or student.section.department_id not in faculty_scope_filter(faculty):
+        raise HTTPException(status_code=403, detail="Access denied to this student")
+
+
 @router.post("", response_model=dict)
 def create_intervention(
     data: InterventionCreate,
@@ -30,6 +41,7 @@ def create_intervention(
     student = db.query(Student).filter(Student.id == data.student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+    _check_student_access(db, student, current_user)
 
     try:
         itype = InterventionType(data.type)
@@ -40,7 +52,9 @@ def create_intervention(
     if current_user.role == UserRole.FACULTY:
         faculty = _faculty_for_user(db, current_user)
     else:
-        faculty = db.query(FacultyProfile).first()
+        faculty = db.query(FacultyProfile).filter(
+            FacultyProfile.department_id == student.section.department_id
+        ).first() if student.section else db.query(FacultyProfile).first()
         if not faculty:
             raise HTTPException(status_code=400, detail="No faculty profile exists")
 
@@ -75,7 +89,10 @@ def list_interventions(
     elif current_user.role == UserRole.FACULTY:
         faculty = db.query(FacultyProfile).filter(FacultyProfile.user_id == current_user.id).first()
         if faculty:
-            q = q.filter(Intervention.faculty_id == faculty.id)
+            dept_ids = faculty_scope_filter(faculty)
+            q = q.join(Student, Intervention.student_id == Student.id).join(
+                Student.section
+            ).filter(Section.department_id.in_(dept_ids))
     if student_id:
         q = q.filter(Intervention.student_id == student_id)
     if status:
@@ -98,6 +115,8 @@ def update_intervention(
     intervention = db.query(Intervention).filter(Intervention.id == intervention_id).first()
     if not intervention:
         raise HTTPException(status_code=404, detail="Intervention not found")
+    if intervention.student:
+        _check_student_access(db, intervention.student, current_user)
 
     if data.status:
         try:

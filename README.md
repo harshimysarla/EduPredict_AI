@@ -46,7 +46,7 @@ python -m venv .venv
 pip install -r requirements.txt
 cp ../.env.example ../.env       # adjust DATABASE_URL / SECRET_KEY
 
-# create tables and seed demo data (260 students, 5 departments, faculty, etc.)
+# create tables and seed demo data (263 students, 5 departments, faculty, data sources)
 cd ..
 python scripts/seed_database.py
 
@@ -69,37 +69,49 @@ App: http://localhost:5173 (Vite proxies `/api` to `http://127.0.0.1:8000`).
 
 ## Demo Accounts
 
-| Role    | Email                        | Password     |
-|---------|------------------------------|--------------|
-| Admin   | admin@edupredict.local       | Admin@123    |
-| Faculty | faculty@edupredict.local     | Faculty@123 |
-| Student | student@edupredict.local     | Student@123 |
+| Role    | Username                    | Password     |
+|---------|-----------------------------|--------------|
+| Admin   | `admin`                     | `Admin@123`  |
+| Faculty | `faculty`                   | `Faculty@123` |
+| Student | `student001` (any 001–260)  | `Student@123` |
 
-Additional faculty per department: `faculty.ece|mech|civil|it@edupredict.local` / `Faculty@123`.
+Demo risk-profile students (Log in as these to see low/moderate/high dashboards):
+
+| Username    | Student ID   | Risk |
+|-------------|--------------|------|
+| `student01` | `24951A05B1` | low |
+| `student02` | `24951A05B2` | moderate |
+| `student03` | `24951A05B3` | high |
+
+Additional faculty per department: `faculty.ece|mech|civil|it` / `Faculty@123`.
 
 ## Demo Walkthrough
 
-1. Log in as **admin** → Settings: manage departments, sections, subjects, faculty.
-2. Log in as **faculty** → Dashboard shows KPIs; **Students** list supports search/filter/sort; open a profile to view charts and run a new prediction (feature sliders + explanation + recommendations).
-3. **Model Lab** → upload `data/student_performance.csv` (600 rows), validate, train. New models are versioned; promote one to production.
-4. **Predictions** → run batch-style predictions, compare trend, flag escalations.
-5. **Interventions** → create mentor meetings / counselling; track status; view before/after impact on Analytics.
-6. Log in as **student** → personal dashboard with own risk, trend, and recommendations.
+1. Log in as **admin** → Settings: manage departments, sections, subjects, faculty; risk thresholds; activate Data Sources (Demo / CSV import). Top bar shows the active source.
+2. Log in as **faculty** (CSE) → Dashboard shows department KPIs (~55 students); **Students** list supports search/filter by semester & subject; open a profile to view charts and run a new prediction (feature sliders + explanation + recommendations).
+3. Log in as **student01/02/03** → personal dashboard with own risk, health metrics, subject trend, and recommendations.
+4. **Academic Import** → upload a CSV (see [CSV Import](docs/CSV_IMPORT.md)), validate, import; the CSV source becomes active.
+5. **Model Lab** → upload `data/student_performance.csv` (600 rows), validate, train. New models are versioned; promote one to production.
+6. **Predictions** → run batch-style predictions, compare trend, flag escalations.
+7. **Interventions** → create mentor meetings / counselling; track status; view before/after impact on Analytics.
 
 ## Tests
 
 ```bash
-python -m pytest tests/test_api.py -q            # 24 API/RBAC/ML end-to-end tests
-python -m pytest tests/test_ml_pipeline.py -q    # 16 ML pipeline unit tests
-python tests/test_api_surface.py                 # live smoke test (requires running backend)
+python -m pytest tests/test_api.py tests/test_ml_pipeline.py tests/test_api_surface.py -q   # 56 tests
+python -m pytest tests/test_api_surface.py        # live smoke test (optional, requires running backend)
 ```
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [Data Architecture](docs/DATA_ARCHITECTURE.md)
 - [ML Pipeline & Synthetic Data](docs/ML_PIPELINE.md)
 - [Database Schema](docs/DATABASE.md)
 - [API Reference](docs/API.md)
+- [Academic Data Providers](docs/ACADEMIC_PROVIDER.md)
+- [CSV Import](docs/CSV_IMPORT.md)
+- [Samvidha Future Integration](docs/SAMVIDHA_FUTURE_INTEGRATION.md)
 - [Demo Guide](docs/DEMO_GUIDE.md)
 
 ## Project Layout
@@ -111,6 +123,7 @@ python tests/test_api_surface.py                 # live smoke test (requires run
 │   │   ├── core/           # config, database, security, deps
 │   │   ├── ml/             # dataset generator, ML pipeline
 │   │   ├── models/         # SQLAlchemy models
+│   │   ├── providers/      # AcademicDataProvider (DEMO / CSV / SAMVIDHA)
 │   │   ├── schemas/        # Pydantic schemas
 │   │   └── services/       # business logic, ML service, base helpers
 │   └── requirements.txt

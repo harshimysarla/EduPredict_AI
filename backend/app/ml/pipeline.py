@@ -36,10 +36,13 @@ FEATURES = [
 RISK_THRESHOLDS = {"low": 0.39, "moderate": 0.69, "high": 1.0}
 
 
-def risk_level_from_probability(p: float) -> str:
-    if p <= RISK_THRESHOLDS["low"]:
+def risk_level_from_probability(p: float, thresholds: Optional[dict] = None) -> str:
+    t = thresholds or RISK_THRESHOLDS
+    low = float(t.get("low", RISK_THRESHOLDS["low"]))
+    mod = float(t.get("moderate", t.get("high", RISK_THRESHOLDS["moderate"])))
+    if p <= low:
         return "low"
-    if p <= RISK_THRESHOLDS["moderate"]:
+    if p <= mod:
         return "moderate"
     return "high"
 
@@ -230,7 +233,7 @@ def predict_risk(model, scaler, meta, features: dict) -> dict:
     else:
         contributions = {f: 0.0 for f in FEATURES}
 
-    level = risk_level_from_probability(prob)
+    level = risk_level_from_probability(prob, thresholds=meta.get("risk_thresholds"))
 
     # Normalize contributions to impact levels
     impacts = {}
@@ -253,10 +256,45 @@ def predict_risk(model, scaler, meta, features: dict) -> dict:
     }
 
 
-def generate_recommendations(features: dict, risk_level: str) -> list:
+def compute_student_features(db, student_id: int) -> Optional[dict]:
+    """Compute the ML feature vector from a student's actual database records."""
+    from sqlalchemy import func
+    from app.models import (
+        AcademicRecord, AttendanceRecord, EngagementRecord, AssessmentRecord, Student,
+    )
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if student is None:
+        return None
+    att = db.query(func.avg(AttendanceRecord.attendance_percentage)).filter(
+        AttendanceRecord.student_id == student_id).scalar()
+    acad = db.query(func.avg(AcademicRecord.total_score)).filter(
+        AcademicRecord.student_id == student_id).scalar()
+    internal = db.query(func.avg(AssessmentRecord.marks)).filter(
+        AssessmentRecord.student_id == student_id).scalar()
+    if internal is None:
+        internal = db.query(func.avg(AcademicRecord.internal_marks)).filter(
+            AcademicRecord.student_id == student_id).scalar()
+    assign = db.query(func.avg(AcademicRecord.assignment_score)).filter(
+        AcademicRecord.student_id == student_id).scalar()
+    eng = db.query(func.avg(EngagementRecord.engagement_score)).filter(
+        EngagementRecord.student_id == student_id).scalar()
+    if att is None and acad is None and internal is None:
+        return None
+    return {
+        "attendance": float(att or 0),
+        "previous_performance": float(acad or 0),
+        "internal_marks": float(internal or 0),
+        "assignment_score": float(assign or 0),
+        "engagement": float(eng or 0),
+        "study_hours": 0.0,
+    }
+
+
+def generate_recommendations(features: dict, risk_level: str,
+                             thresholds: Optional[dict] = None) -> list:
     recs = []
     if features["attendance"] < 75:
-        recs.append("Improve attendance and maintain at least the institution's configured attendance target of 75%.")
+        recs.append("Improve attendance — maintain the 75% attendance target to reduce academic risk.")
     if features["internal_marks"] < 60:
         recs.append("Schedule additional practice for weak assessment areas to raise internal assessment scores.")
     if features["engagement"] < 55:
@@ -267,10 +305,11 @@ def generate_recommendations(features: dict, risk_level: str) -> list:
         recs.append("Reinforce foundational concepts from previous semesters to build on prior performance.")
     if features["study_hours"] < 3:
         recs.append("Increase daily study hours with a structured study plan.")
+    t = thresholds or RISK_THRESHOLDS
     if risk_level == "high":
-        recs.append("Schedule an academic mentoring session immediately.")
+        recs.append("High risk detected — schedule an academic mentoring session immediately.")
     elif risk_level == "moderate":
-        recs.append("Schedule a follow-up mentoring session to monitor progress.")
+        recs.append("Moderate risk detected — schedule a follow-up mentoring session to monitor progress.")
     if not recs:
         recs.append("Maintain current academic habits and continue consistent performance.")
     return recs

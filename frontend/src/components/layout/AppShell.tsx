@@ -67,6 +67,20 @@ const navSections = [
   },
 ]
 
+const studentNavSections = [
+  {
+    label: "Overview",
+    items: [{ to: "/student", label: "Your Dashboard", icon: LayoutDashboard }],
+  },
+  {
+    label: "Account",
+    items: [
+      { to: "/settings", label: "Settings", icon: Settings },
+      { to: "/profile", label: "Profile", icon: UserRound },
+    ],
+  },
+]
+
 function NotificationBell() {
   const { data } = useQuery({
     queryKey: ["notifications"],
@@ -199,10 +213,42 @@ function GlobalSearch() {
   )
 }
 
+function DataSourceBadge() {
+  const { data } = useQuery({
+    queryKey: ["data-source"],
+    queryFn: () => api.get<{ name: string; type: string; status: string; record_count: number | null; samvidha_status?: string }>("/data-source"),
+    refetchInterval: 60000,
+  })
+  if (!data) return null
+  const activeType = data.type
+  const label =
+    activeType === "CSV"
+      ? "Approved Academic Data"
+      : activeType === "SAMVIDHA"
+        ? "Samvidha Connected"
+        : "Synthetic Demo Data"
+  const color =
+    activeType === "CSV"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+      : activeType === "SAMVIDHA"
+        ? "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400"
+        : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+  return (
+    <span
+      className={`hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold md:flex ${color}`}
+      title={`Active data source: ${data.name} (${data.status})`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {label}
+    </span>
+  )
+}
+
 export function AppShell() {
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const navSectionsForRole = user?.role === "student" ? studentNavSections : navSections
 
   const initials = (user?.full_name ?? "U")
     .split(" ")
@@ -237,7 +283,7 @@ export function AppShell() {
         </div>
 
         <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-          {navSections.map((section) => (
+          {navSectionsForRole.map((section) => (
             <div key={section.label}>
               <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
                 {section.label}
@@ -292,6 +338,7 @@ export function AppShell() {
           </button>
           <GlobalSearch />
           <div className="ml-auto flex items-center gap-1.5">
+            <DataSourceBadge />
             <NotificationBell />
             <button
               onClick={toggleTheme}
@@ -316,7 +363,7 @@ export function AppShell() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
+                <DropdownMenuLabel>{user?.username ?? user?.email ?? "Account"}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/profile">

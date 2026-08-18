@@ -68,6 +68,7 @@ function AdminSettings() {
   const [subjSem, setSubjSem] = useState("1")
 
   const [facName, setFacName] = useState("")
+  const [facUsername, setFacUsername] = useState("")
   const [facEmail, setFacEmail] = useState("")
   const [facPassword, setFacPassword] = useState("")
   const [facEmpId, setFacEmpId] = useState("")
@@ -85,6 +86,43 @@ function AdminSettings() {
     queryKey: ["subjects"],
     queryFn: () => api.get<Subject[]>("/subjects"),
   })
+  const { data: dataSources } = useQuery({
+    queryKey: ["data-sources"],
+    queryFn: () =>
+      api.get<{ name: string; type: string; status: string; display_name: string | null; last_synced_at: string | null; record_count: number | null }[]>("/admin/data-sources"),
+  })
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: () =>
+      api.get<{ key: string; value: string }[]>("/admin/settings"),
+  })
+  const [riskLow, setRiskLow] = useState(settings?.find((s) => s.key === "risk_low")?.value ?? "0.39")
+  const [riskHigh, setRiskHigh] = useState(settings?.find((s) => s.key === "risk_high")?.value ?? "0.69")
+  const activate = useMutation({
+    mutationFn: (type: string) => api.post(`/admin/data-sources/${type}/activate`),
+    onSuccess: () => {
+      toast.success("Data source activated")
+      queryClient.invalidateQueries({ queryKey: ["data-sources"] })
+      queryClient.invalidateQueries({ queryKey: ["data-source"] })
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Activation failed"),
+  })
+  const saveLow = useMutation({
+    mutationFn: (value: string) => api.put(`/admin/settings/risk_low`, { value }),
+    onSuccess: () => {
+      toast.success("Risk thresholds saved")
+      queryClient.invalidateQueries({ queryKey: ["settings"] })
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Save failed"),
+  })
+  const saveHigh = useMutation({
+    mutationFn: (value: string) => api.put(`/admin/settings/risk_high`, { value }),
+    onSuccess: () => {
+      toast.success("Risk thresholds saved")
+      queryClient.invalidateQueries({ queryKey: ["settings"] })
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Save failed"),
+  })
 
   const mutation = useMutation({
     mutationFn: ({ path, body }: { path: string; body: Record<string, unknown> }) =>
@@ -101,7 +139,7 @@ function AdminSettings() {
       setDeptName(""); setDeptCode("")
       setSecName(""); setSecDept("")
       setSubjName(""); setSubjCode(""); setSubjDept("")
-      setFacName(""); setFacEmail(""); setFacPassword(""); setFacEmpId(""); setFacDept("")
+      setFacName(""); setFacUsername(""); setFacEmail(""); setFacPassword(""); setFacEmpId(""); setFacDept("")
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Creation failed"),
   })
@@ -378,7 +416,11 @@ function AdminSettings() {
               <Input value={facName} onChange={(e) => setFacName(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Email</Label>
+              <Label>Username</Label>
+              <Input value={facUsername} onChange={(e) => setFacUsername(e.target.value)} placeholder="e.g. faculty.ece" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Email (optional)</Label>
               <Input type="email" value={facEmail} onChange={(e) => setFacEmail(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -411,7 +453,8 @@ function AdminSettings() {
                   path: "/admin/faculty",
                   body: {
                     full_name: facName,
-                    email: facEmail,
+                    username: facUsername,
+                    email: facEmail || undefined,
                     password: facPassword,
                     employee_id: facEmpId,
                     department_id: Number(facDept),
@@ -424,6 +467,106 @@ function AdminSettings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Data sources */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Data Sources</CardTitle>
+          <CardDescription>
+            Choose which academic data provider feeds dashboards and predictions.
+            Demo data is synthetic; connect an approved CSV import for real records.
+            Samvidha integration is planned but not yet configured.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-3">
+          {dataSources?.map((ds) => {
+            const statusColor =
+              ds.status === "ACTIVE"
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                : ds.status === "NOT_CONFIGURED"
+                  ? "border-red-500/40 bg-red-500/10 text-red-500"
+                  : "border-[var(--border)] text-[var(--muted-foreground)]"
+            return (
+              <div key={ds.type} className="rounded-lg border border-[var(--border)] p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">{ds.display_name ?? ds.name}</p>
+                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusColor}`}>
+                    {ds.status === "ACTIVE" ? "ACTIVE" : ds.status === "AVAILABLE" ? "READY" : "NOT CONFIGURED"}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                  {ds.record_count != null ? `${ds.record_count} academic records loaded` : "No records loaded"}
+                  {ds.last_synced_at ? ` · synced ${new Date(ds.last_synced_at).toLocaleDateString()}` : ""}
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 w-full"
+                  disabled={ds.status === "ACTIVE" || ds.status === "NOT_CONFIGURED" || activate.isPending}
+                  onClick={() => activate.mutate(ds.type)}
+                >
+                  {ds.status === "ACTIVE" ? "Currently Active" : ds.status === "NOT_CONFIGURED" ? "Not Available" : "Activate"}
+                </Button>
+              </div>
+            )
+          })}
+        </CardContent>
+      </Card>
+
+      {/* Risk thresholds */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Risk Thresholds</CardTitle>
+          <CardDescription>
+            Probability ranges that classify students as LOW / MODERATE / HIGH risk.
+            Students above the high threshold are flagged for intervention.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>Moderate risk threshold</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              max="1"
+              value={riskLow}
+              onChange={(e) => setRiskLow(e.target.value)}
+              placeholder="0.39"
+            />
+            <p className="text-xs text-[var(--muted-foreground)]">
+              Above this, students are classified as MODERATE risk.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>High risk threshold</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              max="1"
+              value={riskHigh}
+              onChange={(e) => setRiskHigh(e.target.value)}
+              placeholder="0.69"
+            />
+            <p className="text-xs text-[var(--muted-foreground)]">
+              Above this, students are classified as HIGH risk.
+            </p>
+          </div>
+          <div className="md:col-span-2">
+            <Button
+              size="sm"
+              disabled={saveLow.isPending || saveHigh.isPending}
+              onClick={() => {
+                saveLow.mutate(riskLow)
+                saveHigh.mutate(riskHigh)
+              }}
+            >
+              Save thresholds
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -11,9 +11,10 @@ import {
   Table2,
   FileWarning,
   Loader2,
+  FileSpreadsheet,
 } from "lucide-react"
 import { api } from "@/lib/api"
-import type { DatasetItem, DatasetPreview } from "@/types"
+import type { DatasetItem, DatasetPreview, ImportValidationReport, ImportResult, ImportHistoryItem } from "@/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -107,6 +108,8 @@ export default function Dataset() {
           {REQUIRED_COLUMNS.join(", ")}.
         </p>
       </div>
+
+      <AcademicImport />
 
       {/* Upload zone */}
       <Card
@@ -299,5 +302,179 @@ export default function Dataset() {
         </Card>
       )}
     </div>
+  )
+}
+
+function AcademicImport() {
+  const queryClient = useQueryClient()
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [file, setFile] = useState<File | null>(null)
+  const [report, setReport] = useState<ImportValidationReport | null>(null)
+
+  const { data: history } = useQuery({
+    queryKey: ["imports-history"],
+    queryFn: () => api.get<ImportHistoryItem[]>("/datasets/imports/history"),
+  })
+
+  const validate = useMutation({
+    mutationFn: async (f: File) => {
+      const fd = new FormData()
+      fd.append("file", f)
+      return api.post<ImportValidationReport>("/datasets/import/validate", fd)
+    },
+    onSuccess: (rep) => {
+      setReport(rep)
+      if (rep.valid_rows === 0) {
+        toast.error("No valid rows found — fix the errors and retry")
+      } else {
+        toast.success(`Validation complete: ${rep.valid_rows} of ${rep.rows} rows are valid`)
+      }
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Validation failed"),
+  })
+
+  const doImport = useMutation({
+    mutationFn: async (f: File) => {
+      const fd = new FormData()
+      fd.append("file", f)
+      return api.post<ImportResult>("/datasets/import", fd)
+    },
+    onSuccess: (res) => {
+      toast.success(`Imported ${res.imported_rows} records (${res.created_students.length} new students)`)
+      queryClient.invalidateQueries({ queryKey: ["imports-history"] })
+      queryClient.invalidateQueries({ queryKey: ["data-source"] })
+      queryClient.invalidateQueries({ queryKey: ["data-sources"] })
+      setReport(null)
+      setFile(null)
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Import failed"),
+  })
+
+  const pick = (f: File | undefined) => {
+    if (!f) return
+    if (!f.name.endsWith(".csv")) {
+      toast.error("Only CSV files are supported")
+      return
+    }
+    setFile(f)
+    setReport(null)
+    validate.mutate(f)
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileSpreadsheet className="h-4 w-4 text-emerald-500" /> Import Academic Records
+        </CardTitle>
+        <CardDescription>
+          Load approved academic records (students, subjects, internal assessments, assignments,
+          attendance) into the platform. Records are validated first — only valid rows are imported.
+          Expected columns: student_id, subject, semester, attendance, internal_1, internal_2,
+          assignment_score, engagement, target, optionally student_name / department / section / previous_performance.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={(e) => pick(e.target.files?.[0])}
+          />
+          <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={validate.isPending || doImport.isPending}>
+            {validate.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {file ? file.name : "Choose academic CSV"}
+          </Button>
+          {report && (
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="info">{report.rows} total rows</Badge>
+              <Badge variant="success">{report.valid_rows} valid</Badge>
+              {report.warnings > 0 && <Badge variant="warning">{report.warnings} warnings</Badge>}
+              {report.rejected > 0 && <Badge variant="destructive">{report.rejected} rejected</Badge>}
+            </div>
+          )}
+        </div>
+
+        {report && (
+          <div className="space-y-4 rounded-lg border border-[var(--border)] p-4">
+            {report.will_create_students && (
+              <p className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Import will auto-create new student accounts for student IDs not present in the database.
+              </p>
+            )}
+
+            {report.errors.length > 0 && (
+              <div>
+                <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-red-500">
+                  <XCircle className="h-4 w-4" /> Errors ({report.errors_total})
+                </p>
+                <ul className="space-y-1">
+                  {report.errors.slice(0, 5).map((e, i) => (
+                    <li key={i} className="text-xs text-[var(--muted-foreground)]">{e}</li>
+                  ))}
+                  {report.error_truncated && (
+                    <li className="text-xs text-[var(--muted-foreground)]">… and more errors</li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            {report.preview.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                      {Object.keys(report.preview[0] ?? {}).map((c) => (
+                        <th key={c} className="px-3 py-2 font-medium">{c}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.preview.map((row, i) => (
+                      <tr key={i} className="border-b border-[var(--border)] last:border-0">
+                        {Object.values(row).map((v, j) => (
+                          <td key={j} className="px-3 py-1.5">{v == null ? "" : String(v)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {report.valid_rows > 0 && (
+              <Button
+                disabled={doImport.isPending}
+                onClick={() => file && doImport.mutate(file)}
+              >
+                {doImport.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                {doImport.isPending ? "Importing…" : `Import ${report.valid_rows} valid records`}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {history && history.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+              Recent imports
+            </p>
+            <div className="space-y-1.5">
+              {history.slice(0, 5).map((h) => (
+                <div key={h.id} className="flex items-center justify-between rounded-md border border-[var(--border)] px-3 py-2 text-xs">
+                  <span className="font-medium">{h.name}</span>
+                  <span className="text-[var(--muted-foreground)]">
+                    {h.rows ?? "?"} rows · {formatDateTime(h.created_at)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }

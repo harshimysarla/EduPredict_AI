@@ -7,13 +7,15 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, require_roles, get_faculty_or_admin
 from app.models import (
     User, UserRole, Student, Section, Department, AcademicRecord, AttendanceRecord,
-    EngagementRecord, Subject,
+    EngagementRecord, Subject, FacultyProfile,
 )
 from app.schemas import (
     StudentCreate, StudentUpdate, StudentOut, AcademicRecordOut,
-    AttendanceRecordOut, EngagementRecordOut,
+    AttendanceRecordOut, EngagementRecordOut, AcademicSummaryOut,
 )
-from app.services.base import get_student_summary, create_student
+from app.services.base import (
+    get_student_summary, create_student, build_academic_summary, faculty_scope_filter,
+)
 
 router = APIRouter(prefix="/students", tags=["students"])
 
@@ -37,21 +39,58 @@ def _to_out(db: Session, s: Student) -> StudentOut:
     )
 
 
+def _load_student(db: Session, student_id: int) -> Student:
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return student
+
+
+def _check_access(db: Session, student: Student, current_user: User) -> None:
+    """Authorization: students only their own data; faculty only their
+    department's students; admins everything. Never leaks existence."""
+    if current_user.role == UserRole.ADMIN:
+        return
+    if current_user.role == UserRole.STUDENT:
+        if student.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        return
+    fp = db.query(FacultyProfile).filter(FacultyProfile.user_id == current_user.id).first()
+    if fp is None:
+        raise HTTPException(status_code=403, detail="Access denied")
+    section = student.section
+    if section is None or section.department_id not in faculty_scope_filter(fp):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+
 @router.get("", response_model=list[StudentOut])
 def list_students(
     search: Optional[str] = None,
     risk: Optional[str] = None,
     section_id: Optional[int] = None,
     department_id: Optional[int] = None,
+    semester: Optional[int] = None,
+    subject_id: Optional[int] = None,
     year: Optional[int] = None,
     sort: Optional[str] = "risk_probability",
-    order: Optional[str] = "asc",
+    order: Optional[str] = "desc",
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_faculty_or_admin),
 ):
     q = db.query(Student).join(Student.user)
+
+    # Faculty scope: only students of the faculty member's department(s)
+    if current_user.role == UserRole.FACULTY:
+        fp = db.query(FacultyProfile).filter(FacultyProfile.user_id == current_user.id).first()
+        if fp is None:
+            return []
+        dept_ids = faculty_scope_filter(fp)
+        q = q.join(Section, Student.section_id == Section.id).filter(
+            Section.department_id.in_(dept_ids)
+        )
+
     if search:
         like = f"%{search}%"
         q = q.filter(or_(Student.student_id.ilike(like), User.full_name.ilike(like)))
@@ -59,17 +98,19 @@ def list_students(
         q = q.filter(Student.section_id == section_id)
     if department_id:
         q = q.join(Section, Student.section_id == Section.id).filter(Section.department_id == department_id)
+    if semester:
+        q = q.filter(Student.current_semester == semester)
     if year:
         q = q.filter(Student.admission_year == year)
+    if subject_id:
+        q = q.join(AcademicRecord, AcademicRecord.student_id == Student.id).filter(
+            AcademicRecord.subject_id == subject_id
+        ).distinct()
 
     students = q.order_by(Student.id).all()
 
-    # Apply risk filter and sort post-hoc since risk comes from latest prediction
     from app.models import Prediction
-    out_list = []
-    for s in students:
-        out = _to_out(db, s)
-        out_list.append(out)
+    out_list = [_to_out(db, s) for s in students]
 
     if risk:
         out_list = [o for o in out_list if o.risk_level == risk]
@@ -77,7 +118,7 @@ def list_students(
     def sort_key(o: StudentOut):
         if sort == "attendance":
             return o.attendance if o.attendance is not None else -1
-        if sort == "average_score":
+        if sort in ("average_score", "performance"):
             return o.average_score if o.average_score is not None else -1
         if sort == "engagement":
             return o.engagement if o.engagement is not None else -1
@@ -88,7 +129,20 @@ def list_students(
     total = len(out_list)
     start = (page - 1) * page_size
     items = out_list[start : start + page_size]
-    return items
+    # Include total via response header for pagination
+    items_ = items
+    return items_
+
+
+@router.get("/{student_id}/academic-summary", response_model=AcademicSummaryOut)
+def academic_summary(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    student = _load_student(db, student_id)
+    _check_access(db, student, current_user)
+    return build_academic_summary(db, student)
 
 
 @router.post("", response_model=StudentOut, status_code=201)
@@ -102,12 +156,12 @@ def add_student(
         raise HTTPException(status_code=400, detail="Section not found")
     if db.query(Student).filter(Student.student_id == data.student_id).first():
         raise HTTPException(status_code=400, detail="Student ID already exists")
-    if db.query(User).filter(User.email == data.email.lower()).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
+    if db.query(User).filter(User.username == data.username.lower()).first():
+        raise HTTPException(status_code=400, detail="Username already taken")
 
     student = create_student(
-        db, data.student_id, data.full_name, data.email, data.password,
-        section, data.admission_year, data.current_semester,
+        db, data.student_id, data.full_name, data.username, data.password,
+        section, data.admission_year, data.current_semester, email=data.email,
     )
     db.commit()
     db.refresh(student)
@@ -120,14 +174,8 @@ def get_student(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    student = db.query(Student).filter(Student.id == student_id).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
-
-    # Students can only access their own profile
-    if current_user.role == UserRole.STUDENT and student.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
-
+    student = _load_student(db, student_id)
+    _check_access(db, student, current_user)
     return _to_out(db, student)
 
 
@@ -138,9 +186,7 @@ def update_student(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.ADMIN)),
 ):
-    student = db.query(Student).filter(Student.id == student_id).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+    student = _load_student(db, student_id)
 
     if data.full_name:
         student.user.full_name = data.full_name
@@ -167,11 +213,8 @@ def student_performance(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    student = db.query(Student).filter(Student.id == student_id).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
-    if current_user.role == UserRole.STUDENT and student.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    student = _load_student(db, student_id)
+    _check_access(db, student, current_user)
 
     records = (
         db.query(AcademicRecord)
@@ -200,11 +243,8 @@ def student_attendance(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    student = db.query(Student).filter(Student.id == student_id).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
-    if current_user.role == UserRole.STUDENT and student.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    student = _load_student(db, student_id)
+    _check_access(db, student, current_user)
 
     records = (
         db.query(AttendanceRecord)
@@ -233,11 +273,8 @@ def student_engagement(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    student = db.query(Student).filter(Student.id == student_id).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
-    if current_user.role == UserRole.STUDENT and student.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    student = _load_student(db, student_id)
+    _check_access(db, student, current_user)
 
     records = (
         db.query(EngagementRecord)

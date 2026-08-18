@@ -8,12 +8,12 @@ client = TestClient(app)
 
 
 def test_full_api_surface():
-    # 1. Login
-    r = client.post("/auth/login", json={"email": "faculty@edupredict.local", "password": "Faculty@123"})
+    # 1. Login as admin for full platform view
+    r = client.post("/auth/login", json={"username": "admin", "password": "Admin@123"})
     assert r.status_code == 200, r.text
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-    print("LOGIN faculty OK")
+    print("LOGIN admin OK")
 
     # 2. Dashboard analytics
     r = client.get("/analytics/dashboard", headers=headers)
@@ -110,7 +110,7 @@ def test_full_api_surface():
     print("REPORT generated for", rep["student"]["name"], "recommendations:", len(rep["recommendations"]))
 
     # 11. Student role isolation
-    r = client.post("/auth/login", json={"email": "student@edupredict.local", "password": "Student@123"})
+    r = client.post("/auth/login", json={"username": "student001", "password": "Student@123"})
     assert r.status_code == 200
     stoken = r.json()["access_token"]
     sheaders = {"Authorization": f"Bearer {stoken}"}

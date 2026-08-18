@@ -12,7 +12,7 @@ import {
   UserPlus,
 } from "lucide-react"
 import { api } from "@/lib/api"
-import type { StudentSummary, Department, Section } from "@/types"
+import type { StudentSummary, Department, Section, Subject } from "@/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -34,12 +34,14 @@ export default function Students() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
-  const [search, setSearch] = useState("")
+const [search, setSearch] = useState("")
   const [debounced, setDebounced] = useState("")
   const [risk, setRisk] = useState(searchParams.get("risk") ?? "all")
   const [departmentId, setDepartmentId] = useState("all")
   const [sectionId, setSectionId] = useState("all")
   const [year, setYear] = useState("all")
+  const [semester, setSemester] = useState("all")
+  const [subjectId, setSubjectId] = useState("all")
   const [sort, setSort] = useState("risk_probability")
   const [order, setOrder] = useState<"asc" | "desc">("desc")
   const [page, setPage] = useState(1)
@@ -51,7 +53,7 @@ export default function Students() {
 
   useEffect(() => {
     setPage(1)
-  }, [debounced, risk, departmentId, sectionId, year, sort, order])
+  }, [debounced, risk, departmentId, sectionId, year, semester, subjectId, sort, order])
 
   const params = new URLSearchParams()
   if (debounced) params.set("search", debounced)
@@ -59,6 +61,8 @@ export default function Students() {
   if (departmentId !== "all") params.set("department_id", departmentId)
   if (sectionId !== "all") params.set("section_id", sectionId)
   if (year !== "all") params.set("year", year)
+  if (semester !== "all") params.set("semester", semester)
+  if (subjectId !== "all") params.set("subject_id", subjectId)
   params.set("sort", sort)
   params.set("order", order)
   params.set("page", String(page))
@@ -70,13 +74,17 @@ export default function Students() {
     placeholderData: (prev) => prev,
   })
 
-  const { data: departments } = useQuery({
+const { data: departments } = useQuery({
     queryKey: ["departments"],
     queryFn: () => api.get<Department[]>("/departments"),
   })
   const { data: sections } = useQuery({
     queryKey: ["sections"],
     queryFn: () => api.get<Section[]>("/sections"),
+  })
+  const { data: subjects } = useQuery({
+    queryKey: ["subjects"],
+    queryFn: () => api.get<Subject[]>("/subjects"),
   })
 
   const toggleSort = (key: string) => {
@@ -178,6 +186,34 @@ export default function Students() {
                   {y}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select value={semester} onValueChange={setSemester}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Semester" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Semesters</SelectItem>
+              {[1, 2, 3].map((s) => (
+                <SelectItem key={s} value={String(s)}>
+                  Semester {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={subjectId} onValueChange={setSubjectId}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Subject" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Subjects</SelectItem>
+              {subjects
+                ?.filter((s) => departmentId === "all" || String(s.department_id) === departmentId)
+                .map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    {s.code}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </CardContent>

@@ -11,17 +11,63 @@ class Token(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: str
+    username: str
     password: str = Field(min_length=6)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=6)
 
 
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    email: str
+    username: str
+    email: Optional[str] = None
     full_name: str
     role: str
     is_active: bool
+
+
+class DataSourceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    type: str
+    status: str
+    description: Optional[str] = None
+    last_synced_at: Optional[datetime] = None
+    record_count: Optional[int] = None
+
+
+class SystemSettingOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    key: str
+    value: str
+
+
+class SubjectAnalysis(BaseModel):
+    subject_id: int
+    subject_name: str
+    subject_code: str
+    attendance: Optional[float] = None
+    internal_marks: Optional[float] = None
+    assignment_score: Optional[float] = None
+    engagement: Optional[float] = None
+    total_score: Optional[float] = None
+    grade: Optional[str] = None
+    trend: Optional[str] = None  # up / down / stable
+
+
+class AcademicSummaryOut(BaseModel):
+    profile: dict
+    health: dict
+    subjects: List[SubjectAnalysis]
+    performance_history: List[dict]
+    risk: dict
+    recommendations: List[str] = []
+    data_source: dict
 
 
 class DepartmentOut(BaseModel):
@@ -54,7 +100,8 @@ class SubjectOut(BaseModel):
 class StudentCreate(BaseModel):
     student_id: str
     full_name: str
-    email: str
+    username: str
+    email: Optional[str] = None
     password: str = Field(min_length=6)
     section_id: int
     admission_year: int
@@ -63,6 +110,7 @@ class StudentCreate(BaseModel):
 
 class StudentUpdate(BaseModel):
     full_name: Optional[str] = None
+    username: Optional[str] = None
     email: Optional[str] = None
     section_id: Optional[int] = None
     admission_year: Optional[int] = None
@@ -75,7 +123,7 @@ class StudentOut(BaseModel):
     id: int
     student_id: str
     full_name: str
-    email: str
+    email: Optional[str] = None
     section_id: int
     section_name: Optional[str] = None
     department_name: Optional[str] = None

@@ -4,14 +4,23 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_faculty_or_admin
-from app.models import User, UserRole, Student, Prediction, ModelVersion
+from app.models import User, UserRole, Student, Prediction, ModelVersion, FacultyProfile
 from app.schemas import PredictionRequest, PredictionOut
-from app.services.base import serialize_prediction
+from app.services.base import serialize_prediction, faculty_scope_filter
 from app.services.ml_service import MLService
 from app.ml.pipeline import predict_risk, load_model_package, generate_recommendations, FEATURES
 
 router = APIRouter(prefix="/predictions", tags=["predictions"])
 ml_service = MLService()
+
+
+def _check_faculty_scope(db: Session, student: Student, current_user: User) -> None:
+    if current_user.role == UserRole.ADMIN:
+        return
+    fp = db.query(FacultyProfile).filter(FacultyProfile.user_id == current_user.id).first()
+    if fp is None or student.section is None or \
+            student.section.department_id not in faculty_scope_filter(fp):
+        raise HTTPException(status_code=403, detail="Access denied to this student")
 
 
 @router.post("", response_model=dict)
@@ -24,6 +33,7 @@ def create_prediction(
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+    _check_faculty_scope(db, student, current_user)
 
     feature_dict = {
         "attendance": features.attendance,
@@ -52,8 +62,11 @@ def student_predictions(
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
-    if current_user.role == UserRole.STUDENT and student.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    if current_user.role == UserRole.STUDENT:
+        if student.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+    else:
+        _check_faculty_scope(db, student, current_user)
 
     preds = (
         db.query(Prediction)

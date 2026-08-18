@@ -1,3 +1,22 @@
+"""Seed the EduPredict AI database with demo data.
+
+What is created:
+  * 3 dedicated demo students with CONTRASTING risk profiles:
+      student01 -> 24951A05B1 (LOW risk)
+      student02 -> 24951A05B2 (MODERATE risk)
+      student03 -> 24951A05B3 (HIGH risk)
+    Each has its own academic records, assessments, assignments, attendance,
+    engagement, prediction history and interventions.
+  * 260 additional students (usernames student001..student260) covering all
+    departments with realistic variation (high/moderate/low risk).
+  * Admin + faculty accounts per department.
+  * Data source registry (DEMO active, CSV available, SAMVIDHA not configured),
+    semester reference data, and default risk threshold settings.
+
+All academic data is SYNTHETIC DEMO DATA generated with the documented
+calibration (backend/app/ml/dataset_generator.py, seed=42). It must never be
+presented as real IARE student data. Login is by username + password.
+"""
 import os
 import random
 import sys
@@ -14,7 +33,8 @@ from app.core.database import Base, engine, SessionLocal
 from app.core.security import get_password_hash
 from app.models import (
     User, UserRole, Department, Section, Subject, Student, FacultyProfile,
-    AcademicRecord, AttendanceRecord, EngagementRecord, Prediction, RiskLevel,
+    AcademicRecord, AttendanceRecord, EngagementRecord, AssessmentRecord,
+    AssignmentRecord, Prediction, RiskLevel, Semester, SystemSetting,
     Intervention, InterventionType, InterventionStatus, Notification,
 )
 from app.services.base import create_user, notify
@@ -32,8 +52,8 @@ DEPARTMENTS = [
 
 SUBJECTS_BY_DEPT = {
     "CSE": [
-        ("Data Structures", "CSE201"),
-        ("Database Systems", "CSE202"),
+        ("Database Management Systems", "CSE201"),
+        ("Design & Analysis of Algorithms", "CSE202"),
         ("Operating Systems", "CSE203"),
         ("Machine Learning", "CSE204"),
         ("Computer Networks", "CSE205"),
@@ -85,32 +105,11 @@ LAST_NAMES = [
     "Saxena", "Trivedi", "Yadav", "Mishra", "Pandey", "Tiwari", "Dubey", "Chopra",
 ]
 
+STUDENT_PASSWORD = "Student@123"
 
-def seed(db: Session):
-    rng = np.random.default_rng(SEED)
-    random.seed(SEED)
 
-    print("Seeding base data...")
-
-    # Admin
-    admin_user = db.query(User).filter(User.email == "admin@edupredict.local").first()
-    if not admin_user:
-        admin_user = User(
-            email="admin@edupredict.local",
-            hashed_password=get_password_hash("Admin@123"),
-            full_name="System Administrator",
-            role=UserRole.ADMIN,
-        )
-        db.add(admin_user)
-        db.flush()
-        print("  Created admin account (admin@edupredict.local / Admin@123)")
-
-    faculty_profiles = {}
-    departments = {}
-    sections = []
-    subjects_by_code = {}
-
-    for idx, (name, code) in enumerate(DEPARTMENTS):
+def _seed_reference(db: Session, departments: dict, sections: list, subjects_by_code: dict):
+    for name, code in DEPARTMENTS:
         dept = db.query(Department).filter(Department.code == code).first()
         if not dept:
             dept = Department(name=name, code=code, description=f"{name} department")
@@ -118,144 +117,233 @@ def seed(db: Session):
             db.flush()
         departments[code] = dept
 
-    # Faculty
-    faculty_emails = {
-        "CSE": "faculty@edupredict.local",
-        "ECE": "faculty.ece@edupredict.local",
-        "MECH": "faculty.mech@edupredict.local",
-        "CIVIL": "faculty.civil@edupredict.local",
-        "IT": "faculty.it@edupredict.local",
+    faculty_by_dept = {
+        "CSE": "faculty",
+        "ECE": "faculty.ece",
+        "MECH": "faculty.mech",
+        "CIVIL": "faculty.civil",
+        "IT": "faculty.it",
     }
-    for code, email in faculty_emails.items():
+    for code, username in faculty_by_dept.items():
         existing = db.query(FacultyProfile).filter(FacultyProfile.employee_id == f"EMP{code}").first()
         if existing:
-            faculty_profiles[code] = existing
             continue
-        user = db.query(User).filter(User.email == email).first()
+        user = db.query(User).filter(User.username == username).first()
         if not user:
-            user = create_user(db, email, "Faculty@123", f"Prof. {departments[code].name.split(' & ')[0]}", UserRole.FACULTY)
-        fp = FacultyProfile(
+            user = create_user(
+                db, username, "Faculty@123",
+                f"Prof. {departments[code].name.split(' & ')[0]}", UserRole.FACULTY,
+                email=f"{username}@edupredict.local",
+            )
+        db.add(FacultyProfile(
             user_id=user.id,
             employee_id=f"EMP{code}",
             department_id=departments[code].id,
             designation="Associate Professor",
-        )
-        db.add(fp)
+        ))
         db.flush()
-        faculty_profiles[code] = fp
-        print(f"  Created faculty account ({email} / Faculty@123)")
 
-    # Sections: A, B per department, 2 semesters
     for code, dept in departments.items():
-        for sem_year in [("2025-2026", 1), ("2025-2026", 2), ("2024-2025", 1)]:
-            for section_letter in ["A", "B"]:
-                name = f"{code}-{section_letter}"
+        for sem_year, sem in [("2025-2026", 1), ("2025-2026", 2), ("2024-2025", 1)]:
+            for letter in ["A", "B"]:
+                name = f"{code}-{letter}"
                 sec = (
                     db.query(Section)
-                    .filter(
-                        Section.name == name,
-                        Section.department_id == dept.id,
-                        Section.academic_year == sem_year[0],
-                        Section.semester == sem_year[1],
-                    )
+                    .filter(Section.name == name, Section.department_id == dept.id,
+                            Section.academic_year == sem_year, Section.semester == sem)
                     .first()
                 )
                 if not sec:
-                    sec = Section(
-                        name=name,
-                        department_id=dept.id,
-                        academic_year=sem_year[0],
-                        semester=sem_year[1],
-                    )
+                    sec = Section(name=name, department_id=dept.id,
+                                  academic_year=sem_year, semester=sem)
                     db.add(sec)
                     db.flush()
                 sections.append(sec)
 
-    # Subjects
-    for code, subjects in SUBJECTS_BY_DEPT.items():
-        for name, subj_code in subjects:
+    for code, subj_list in SUBJECTS_BY_DEPT.items():
+        for name, subj_code in subj_list:
             subject = db.query(Subject).filter(Subject.code == subj_code).first()
             if not subject:
                 subject = Subject(
-                    name=name,
-                    code=subj_code,
-                    department_id=departments[code].id,
-                    credits=3,
-                    semester=1 if int(subj_code[-1]) % 2 == 1 else 2,
+                    name=name, code=subj_code, department_id=departments[code].id,
+                    credits=3, semester=1 if int(subj_code[-1]) % 2 == 1 else 2,
                 )
                 db.add(subject)
                 db.flush()
             subjects_by_code[subj_code] = subject
 
     db.commit()
-    print("  Departments, sections, subjects created")
+    print("  Departments, sections, subjects OK")
 
-    # Students: ~260
-    print("Generating students...")
-    synthetic = generate_synthetic_dataset(260, seed=SEED)
+
+def _seed_meta(db: Session):
+    from app.providers import ensure_default_sources
+    ensure_default_sources(db)
+
+    semesters = [(1, "2025-2026", True), (2, "2025-2026", False), (3, "2024-2025", False)]
+    for sem, year, current in semesters:
+        if not db.query(Semester).filter(Semester.semester == sem).first():
+            db.add(Semester(name=f"Semester {sem}", semester=sem,
+                            academic_year=year, is_current=current))
+    if not db.query(SystemSetting).filter(SystemSetting.key == "risk_low").first():
+        db.add(SystemSetting(key="risk_low", value="0.39"))
+        db.add(SystemSetting(key="risk_high", value="0.69"))
+    db.commit()
+
+
+def seed(db: Session):
+    rng = np.random.default_rng(SEED)
+    random.seed(SEED)
+
+    print("Seeding base data...")
+    admin_user = db.query(User).filter(User.username == "admin").first()
+    if not admin_user:
+        admin_user = create_user(db, "admin", "Admin@123", "System Administrator",
+                                 UserRole.ADMIN, email="admin@edupredict.local")
+        db.flush()
+        print("  Created admin account (admin / Admin@123)")
+
+    departments, sections, subjects_by_code = {}, [], {}
+    _seed_reference(db, departments, sections, subjects_by_code)
+    _seed_meta(db)
 
     main_sections = [s for s in sections if s.academic_year == "2025-2026" and s.semester == 1]
 
-    # Dedicated demo student account (student@edupredict.local / Student@123)
-    demo_user = db.query(User).filter(User.email == "student@edupredict.local").first()
-    if not demo_user:
-        demo_user = create_user(db, "student@edupredict.local", "Student@123", "Demo Student", UserRole.STUDENT)
-        demo_student = Student(
-            user_id=demo_user.id,
-            student_id="CSE2024001",
-            section_id=main_sections[0].id,
-            admission_year=2024,
-            current_semester=1,
-        )
-        db.add(demo_student)
-        db.flush()
-        row = synthetic.iloc[0]
-        demo_sid = demo_student.id
-        for j, (subj_name, subj_code) in enumerate(SUBJECTS_BY_DEPT["CSE"][:4]):
-            internal = float(np.clip(row["internal_marks"] + rng.normal(0, 4), 20, 98).round(1))
-            assignment = float(np.clip(row["assignment_score"] + rng.normal(0, 5), 20, 98).round(1))
-            exam = float(np.clip(internal + rng.normal(6, 6), 20, 98).round(1))
-            total = float(np.clip(0.4 * internal + 0.2 * assignment + 0.4 * exam, 20, 98).round(1))
-            db.add(AcademicRecord(
-                student_id=demo_sid, subject_id=subjects_by_code[subj_code].id,
-                semester=1, internal_marks=internal, assignment_score=assignment,
-                exam_score=exam, total_score=total,
-                grade="A" if total >= 80 else "B",
-            ))
-        for k in range(8):
-            held = 20 + (k * 7) % 15
-            attended = max(1, int(held * 0.82))
-            db.add(AttendanceRecord(
-                student_id=demo_sid, subject_id=subjects_by_code[SUBJECTS_BY_DEPT["CSE"][k % 4][1]].id,                semester=1, month=k + 1, classes_held=held, classes_attended=attended,
-                attendance_percentage=round(attended / held * 100, 1),
-            ))
-            db.add(EngagementRecord(
-                student_id=demo_sid, semester=1, month=k + 1,
-                participation_score=68.0, lms_logins=25 + k, forum_posts=4 + k,
-                study_hours=5.0, engagement_score=68.0,
-            ))
-        db.add(Prediction(
-            student_id=demo_sid, risk_probability=0.21, risk_level=RiskLevel.LOW,
-            model_name="Synthetic Probability (Seed)", model_version="v0",
-            prediction_date=datetime.utcnow() - timedelta(days=25),
-        ))
-        db.add(Intervention(
-            student_id=demo_sid, faculty_id=faculty_profiles["CSE"].id,
-            type=InterventionType.MENTOR_MEETING, title="Mentor meeting",
-            description="Routine progress review with mentor.",
-            status=InterventionStatus.IN_PROGRESS,
-            assigned_date=datetime.utcnow() - timedelta(days=10),
-            follow_up_date=datetime.utcnow() + timedelta(days=7),
-            notes="Monitoring study plan adherence.",
-        ))
-        print("  Created demo student account (student@edupredict.local / Student@123)")
+    # ---------------------------------------------------------------------------
+    print("Generating students...")
+    synthetic = generate_synthetic_dataset(260, seed=SEED)
 
+    def student_records(student: Student, row, semester_offsets=(1, 2), n_subjects=4, rng=rng):
+        """Academic + attendance + engagement + assessment + assignment records."""
+        subj_codes = [s[1] for s in SUBJECTS_BY_DEPT["CSE"][:n_subjects]]
+        for sem_idx in semester_offsets:
+            for j, subj_code in enumerate(subj_codes):
+                base = float(row["internal_marks"]) + rng.normal(0, 4) + (sem_idx - 1) * 4
+                internal = float(np.clip(base, 20, 98).round(1))
+                assignment = float(np.clip(
+                    row["assignment_score"] + rng.normal(0, 5) + (sem_idx - 1) * 3, 20, 98).round(1))
+                exam = float(np.clip(internal + rng.normal(6, 6), 20, 98).round(1))
+                total = float(np.clip(0.4 * internal + 0.2 * assignment + 0.4 * exam, 20, 98).round(1))
+                grade = ("A" if total >= 80 else "B" if total >= 65 else "C"
+                         if total >= 50 else "D" if total >= 40 else "F")
+                db.add(AcademicRecord(
+                    student_id=student.id, subject_id=subjects_by_code[subj_code].id,
+                    semester=sem_idx, internal_marks=internal, assignment_score=assignment,
+                    exam_score=exam, total_score=total, grade=grade,
+                ))
+                i1 = float(np.clip(internal - rng.normal(5, 3), 10, 98).round(1))
+                i2 = float(np.clip(internal + rng.normal(3, 3), 10, 98).round(1))
+                db.add(AssessmentRecord(
+                    student_id=student.id, subject_id=subjects_by_code[subj_code].id,
+                    semester=sem_idx, assessment_number=1, marks=i1,
+                ))
+                db.add(AssessmentRecord(
+                    student_id=student.id, subject_id=subjects_by_code[subj_code].id,
+                    semester=sem_idx, assessment_number=2, marks=i2,
+                ))
+                db.add(AssignmentRecord(
+                    student_id=student.id, subject_id=subjects_by_code[subj_code].id,
+                    semester=sem_idx, score=assignment,
+                    completion_percentage=float(np.clip(assignment + rng.normal(3, 4), 5, 100).round(1)),
+                ))
+            base_att = float(np.clip(row["attendance"] + (sem_idx - 1) * 4, 15, 100))
+            for k in range(8):
+                att = float(np.clip(base_att + rng.normal(0, 5), 15, 100).round(1))
+                held = 20 + (k * 7) % 15
+                db.add(AttendanceRecord(
+                    student_id=student.id, subject_id=subjects_by_code[subj_codes[k % n_subjects]].id,
+                    semester=sem_idx, month=k + 1, classes_held=held,
+                    classes_attended=int(round(held * att / 100)),
+                    attendance_percentage=att,
+                ))
+                eng = float(np.clip(row["engagement"] + rng.normal(0, 6) + (sem_idx - 1) * 3, 5, 100).round(1))
+                study = float(np.clip(row["study_hours"] + rng.normal(0, 0.5), 0.5, 14).round(1))
+                db.add(EngagementRecord(
+                    student_id=student.id, semester=sem_idx, month=k + 1,
+                    participation_score=eng,
+                    lms_logins=int(np.clip(eng * 0.3 + rng.normal(0, 3), 1, 90)),
+                    forum_posts=int(np.clip(eng * 0.05 + rng.normal(0, 3), 0, 30)),
+                    study_hours=study, engagement_score=eng,
+                ))
+        db.flush()
+
+    def add_prediction(student: Student, prob: float, days_ago: int, model="Synthetic Probability (Seed)", version="v0"):
+        prob = float(np.clip(prob, 0.02, 0.97))
+        level = RiskLevel.HIGH if prob > 0.69 else RiskLevel.MODERATE if prob > 0.39 else RiskLevel.LOW
+        db.add(Prediction(
+            student_id=student.id, risk_probability=round(prob, 4), risk_level=level,
+            model_name=model, model_version=version,
+            prediction_date=datetime.utcnow() - timedelta(days=days_ago),
+        ))
+        db.flush()
+        return prob
+
+    # --- Dedicated demo students: student01 / student02 / student03 ---------------
+    # Feature sets are hand-picked so the DOCUMENTED risk formula
+    # (sigmoid(-2.25*perf - 0.7 + noise), weights & z-scores in
+    # backend/app/ml/dataset_generator.py) yields LOW / MODERATE / HIGH risk,
+    # and the raw numbers look plausible for each profile.
+    demo_profiles = [
+        ("student01", "Aarav Sharma", "24951A05B1",
+         dict(attendance=90.0, previous_performance=85.0, internal_marks=88.0,
+              assignment_score=90.0, engagement=85.0, study_hours=6.0)),
+        ("student02", "Riya Verma", "24951A05B2",
+         dict(attendance=74.0, previous_performance=62.0, internal_marks=60.0,
+              assignment_score=65.0, engagement=60.0, study_hours=4.5)),
+        ("student03", "Karan Reddy", "24951A05B3",
+         dict(attendance=52.0, previous_performance=48.0, internal_marks=45.0,
+              assignment_score=50.0, engagement=40.0, study_hours=3.0)),
+    ]
+    for username, full_name, sid, feats in demo_profiles:
+        existing = db.query(Student).filter(Student.student_id == sid).first()
+        if existing:
+            continue
+        user = create_user(db, username, STUDENT_PASSWORD, full_name, UserRole.STUDENT,
+                           email=f"{username}@student.edupredict.local")
+        student = Student(
+            user_id=user.id, student_id=sid, section_id=main_sections[0].id,
+            admission_year=2024, current_semester=1,
+        )
+        db.add(student)
+        db.flush()
+        student_records(student, feats, semester_offsets=(1, 2))
+
+        prob = compute_risk_probability(dict(feats), rng)
+        # history so the risk trend chart is meaningful
+        add_prediction(student, prob - 0.16, 32)
+        add_prediction(student, prob - 0.08, 16)
+        add_prediction(student, prob, 2)
+
+        if prob > 0.6:
+            fp = db.query(FacultyProfile).filter(FacultyProfile.employee_id == "EMPCSE").first()
+            db.add(Intervention(
+                student_id=student.id, faculty_id=fp.id, type=InterventionType.ACADEMIC_COUNSELLING,
+                title="Academic counselling session",
+                description=f"Flagged at {prob - 0.16:.0%} risk; counselling scheduled to improve attendance and internal marks.",
+                status=InterventionStatus.COMPLETED,
+                assigned_date=datetime.utcnow() - timedelta(days=18),
+                follow_up_date=datetime.utcnow() - timedelta(days=4),
+                completed_date=datetime.utcnow() - timedelta(days=5),
+                notes="Weekly attendance and internal-mark monitoring.",
+            ))
+            db.add(Intervention(
+                student_id=student.id, faculty_id=fp.id, type=InterventionType.MENTORING,
+                title="Mentoring for subject support",
+                description="Mentoring sessions on weak subjects.",
+                status=InterventionStatus.IN_PROGRESS,
+                assigned_date=datetime.utcnow() - timedelta(days=6),
+                follow_up_date=datetime.utcnow() + timedelta(days=7),
+            ))
+        print(f"  Created demo student ({username} / {STUDENT_PASSWORD} -> {sid})")
+
+    # --- Bulk students ------------------------------------------------------------
     students_created = 0
     for i in range(260):
         code = DEPARTMENTS[i % len(DEPARTMENTS)][1]
         sec_letter = "A" if (i // 5) % 2 == 0 else "B"
         section = next(
-            (s for s in main_sections if s.department_id == departments[code].id and s.name == f"{code}-{sec_letter}"),
+            (s for s in main_sections if s.department_id == departments[code].id
+             and s.name == f"{code}-{sec_letter}"),
             main_sections[i % len(main_sections)],
         )
         sid = f"{code}{2026 - (i % 3)}{i:03d}"
@@ -265,88 +353,26 @@ def seed(db: Session):
         first = FIRST_NAMES[i % len(FIRST_NAMES)]
         last = LAST_NAMES[(i * 7) % len(LAST_NAMES)]
         full_name = f"{first} {last}"
+        username = f"student{i + 1:03d}"
+        if db.query(User).filter(User.username == username).first():
+            continue
         email = f"{first.lower()}.{last.lower()}{i}@student.edupredict.local"
 
         row = synthetic.iloc[i]
         student = Student(
-            user_id=create_user(
-                db, email, "Student@123", full_name, UserRole.STUDENT
-            ).id,
-            student_id=sid,
-            section_id=section.id,
-            admission_year=2024 + (i % 2),
-            current_semester=1 + (i % 2),
+            user_id=create_user(db, username, STUDENT_PASSWORD, full_name, UserRole.STUDENT,
+                                email=email).id,
+            student_id=sid, section_id=section.id,
+            admission_year=2024 + (i % 2), current_semester=1 + (i % 2),
         )
         db.add(student)
         db.flush()
 
-        student_id = student.id
-        subj_codes = [s[1] for s in SUBJECTS_BY_DEPT[code]]
-        sem = student.current_semester
+        student_records(student, row, semester_offsets=(1, 2))
 
-        # Academic records for 2 semesters
-        for sem_idx in [1, 2]:
-            for j, subj_code in enumerate(subj_codes[:4]):
-                base = row["internal_marks"] + rng.normal(0, 4) + (sem_idx - 1) * 4
-                internal = float(np.clip(base, 20, 98).round(1))
-                assignment = float(np.clip(row["assignment_score"] + rng.normal(0, 5) + (sem_idx - 1) * 3, 20, 98).round(1))
-                exam = float(np.clip(internal + rng.normal(6, 6), 20, 98).round(1))
-                total = float(np.clip(0.4 * internal + 0.2 * assignment + 0.4 * exam, 20, 98).round(1))
-                grade = "A" if total >= 80 else "B" if total >= 65 else "C" if total >= 50 else "D" if total >= 40 else "F"
-                db.add(
-                    AcademicRecord(
-                        student_id=student_id,
-                        subject_id=subjects_by_code[subj_code].id,
-                        semester=sem_idx,
-                        internal_marks=internal,
-                        assignment_score=assignment,
-                        exam_score=exam,
-                        total_score=total,
-                        grade=grade,
-                    )
-                )
-
-        # Attendance: varies by prediction risk
-        base_att = row["attendance"]
-        for sem_idx in [1, 2]:
-            for k in range(8):  # 8 months
-                att = float(np.clip(base_att + rng.normal(0, 6) + (sem_idx - 1) * 2, 15, 100).round(1))
-                held = 20 + (k * 7) % 15
-                attended = int(round(held * att / 100))
-                db.add(
-                    AttendanceRecord(
-                        student_id=student_id,
-                        subject_id=subjects_by_code[subj_codes[k % 4]].id,
-                        semester=sem_idx,
-                        month=k + 1,
-                        classes_held=held,
-                        classes_attended=attended,
-                        attendance_percentage=round(attended / held * 100, 1) if held else 0,
-                    )
-                )
-
-        # Engagement
-        for sem_idx in [1, 2]:
-            for k in range(8):
-                eng = float(np.clip(row["engagement"] + rng.normal(0, 7) + (sem_idx - 1) * 3, 5, 100).round(1))
-                study = float(np.clip(row["study_hours"] + rng.normal(0, 0.5), 0.5, 14).round(1))
-                db.add(
-                    EngagementRecord(
-                        student_id=student_id,
-                        semester=sem_idx,
-                        month=k + 1,
-                        participation_score=eng,
-                        lms_logins=int(np.clip(eng * 0.3 + rng.normal(0, 3), 1, 90)),
-                        forum_posts=int(np.clip(eng * 0.05 + rng.normal(0, 3), 0, 30)),
-                        study_hours=study,
-                        engagement_score=eng,
-                    )
-                )
-
-        # Initial prediction using the documented synthetic risk function
         prob = compute_risk_probability(
             {
-                "attendance": float(base_att),
+                "attendance": float(row["attendance"]),
                 "previous_performance": float(row["previous_performance"]),
                 "internal_marks": float(row["internal_marks"]),
                 "assignment_score": float(row["assignment_score"]),
@@ -355,69 +381,29 @@ def seed(db: Session):
             },
             rng,
         )
-        prob = float(np.clip(prob, 0.02, 0.97))
-        level = RiskLevel.HIGH if prob > 0.69 else RiskLevel.MODERATE if prob > 0.39 else RiskLevel.LOW
-        db.add(
-            Prediction(
-                student_id=student_id,
-                risk_probability=round(prob, 4),
-                risk_level=level,
-                model_name="Synthetic Probability (Seed)",
-                model_version="v0",
-                prediction_date=datetime.utcnow() - timedelta(days=30 + (i % 20)),
-            )
-        )
-
-        # Second prediction 2 weeks ago for most students (so trends exist)
+        add_prediction(student, prob, 30 + (i % 20))
         if i % 5 != 0:
-            prob2 = float(np.clip(prob + rng.normal(0, 0.1), 0.02, 0.97))
-            level2 = RiskLevel.HIGH if prob2 > 0.69 else RiskLevel.MODERATE if prob2 > 0.39 else RiskLevel.LOW
-            db.add(
-                Prediction(
-                    student_id=student_id,
-                    risk_probability=round(prob2, 4),
-                    risk_level=level2,
-                    model_name="Synthetic Probability (Seed)",
-                    model_version="v0",
-                    prediction_date=datetime.utcnow() - timedelta(days=12 + (i % 10)),
-                )
-            )
+            add_prediction(student, prob + rng.normal(0, 0.1), 12 + (i % 10))
 
         if i % 3 == 0:
-            # Interventions for at-risk students
-            can_intervene = prob2 if i % 5 != 0 else prob
+            can_intervene = prob + (rng.normal(0, 0.1) if i % 5 != 0 else 0)
             if can_intervene > 0.35:
-                i_type = (
-                    InterventionType.ACADEMIC_COUNSELLING
-                    if can_intervene > 0.6
-                    else InterventionType.MENTOR_MEETING
-                )
-                fp = faculty_profiles[code]
-                iv = Intervention(
-                    student_id=student_id,
-                    faculty_id=fp.id,
-                    type=i_type,
-                    title=(
-                        "Academic counselling session"
-                        if i_type == InterventionType.ACADEMIC_COUNSELLING
-                        else "Mentor meeting for progress review"
-                    ),
-                    description=f"Student flagged with risk probability {can_intervene:.0%}. Scheduled follow-up to monitor progress.",
-                    status=(
-                        InterventionStatus.COMPLETED
-                        if i % 6 == 0
-                        else InterventionStatus.IN_PROGRESS
-                    ),
+                i_type = (InterventionType.ACADEMIC_COUNSELLING
+                          if can_intervene > 0.6 else InterventionType.MENTOR_MEETING)
+                fp = db.query(FacultyProfile).filter(FacultyProfile.employee_id == f"EMP{code}").first()
+                db.add(Intervention(
+                    student_id=student.id, faculty_id=fp.id, type=i_type,
+                    title="Academic counselling session" if i_type == InterventionType.ACADEMIC_COUNSELLING
+                    else "Mentor meeting for progress review",
+                    description=f"Student flagged with risk probability {can_intervene:.0%}. "
+                                "Scheduled follow-up to monitor progress.",
+                    status=(InterventionStatus.COMPLETED if i % 6 == 0 else InterventionStatus.IN_PROGRESS),
                     assigned_date=datetime.utcnow() - timedelta(days=14 + (i % 10)),
                     follow_up_date=datetime.utcnow() + timedelta(days=7 + (i % 15)),
-                    completed_date=(
-                        datetime.utcnow() - timedelta(days=5)
-                        if i % 6 == 0
-                        else None
-                    ),
+                    completed_date=(datetime.utcnow() - timedelta(days=5)
+                                    if i % 6 == 0 else None),
                     notes="Monitoring weekly performance and attendance.",
-                )
-                db.add(iv)
+                ))
 
         students_created += 1
         if students_created % 50 == 0:
@@ -427,15 +413,13 @@ def seed(db: Session):
     db.commit()
     print(f"Total students seeded: {students_created}")
 
-    # Yearly notifications for all users
     all_users = db.query(User).all()
     for u in all_users:
-        notify(
-            db, u.id,
-            "Welcome to EduPredict AI",
-            "Your account has been created. Explore your dashboard to get started.",
-            "welcome",
-        )
+        if not db.query(Notification).filter(Notification.user_id == u.id,
+                                             Notification.type == "welcome").first():
+            notify(db, u.id, "Welcome to EduPredict AI",
+                   "Your account has been created. Explore your dashboard to get started.",
+                   "welcome")
     db.commit()
     print("Seed complete!")
 

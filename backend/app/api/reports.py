@@ -12,10 +12,19 @@ from app.models import (
     User, UserRole, Student, AcademicRecord, AttendanceRecord, EngagementRecord,
     Prediction, Intervention, Subject, FacultyProfile,
 )
-from app.services.base import get_student_summary
+from app.services.base import get_student_summary, faculty_scope_filter
 from app.ml.pipeline import load_model_package, predict_risk, generate_recommendations, FEATURES
 
 router = APIRouter(prefix="/reports", tags=["reports"])
+
+
+def _check_scope(db: Session, student: Student, current_user: User) -> None:
+    if current_user.role == UserRole.ADMIN:
+        return
+    fp = db.query(FacultyProfile).filter(FacultyProfile.user_id == current_user.id).first()
+    if fp is None or student.section is None or \
+            student.section.department_id not in faculty_scope_filter(fp):
+        raise HTTPException(status_code=403, detail="Access denied to this student")
 
 
 def _assemble_report(db: Session, student: Student) -> dict:
@@ -155,6 +164,7 @@ def student_report(
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+    _check_scope(db, student, current_user)
     report = _assemble_report(db, student)
     report["generated_at"] = datetime.utcnow()
     return report
@@ -169,6 +179,7 @@ def student_report_csv(
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+    _check_scope(db, student, current_user)
     report = _assemble_report(db, student)
 
     buf = io.StringIO()

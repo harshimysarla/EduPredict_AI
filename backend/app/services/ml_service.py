@@ -13,11 +13,12 @@ from app.ml.pipeline import (
     select_best_model,
     load_model_package,
     predict_risk,
+    risk_level_from_probability,
     generate_recommendations,
     FEATURES,
 )
 from app.models import Dataset, ModelVersion, User, Student, Prediction, RiskLevel, Notification
-from app.services.base import notify
+from app.services.base import notify, get_risk_thresholds
 
 
 class MLService:
@@ -133,8 +134,39 @@ class MLService:
             mv.model_path, mv.preprocessor_path, mv.model_path.replace("_model.joblib", "_meta.json")
         )
 
+        thresholds = get_risk_thresholds(db)
         result = predict_risk(model, scaler, meta, features)
-        recommendations = generate_recommendations(features, result["risk_level"])
+        result["risk_level"] = risk_level_from_probability(
+            result["risk_probability"], thresholds=thresholds
+        )
+        recommendations = generate_recommendations(features, result["risk_level"], thresholds=thresholds)
+
+        prediction = Prediction(
+            student_id=student.id,
+            risk_probability=result["risk_probability"],
+            risk_level=RiskLevel(result["risk_level"]),
+            model_name=result["model_used"],
+            model_version=mv.model_id,
+            feature_contributions=json.dumps(
+                {
+                    "contributions": result["contributions"],
+                    "impacts": result["impacts"],
+                }
+            ),
+        )
+        db.add(prediction)
+        db.flush()
+
+        # Persist per-feature records (structured prediction_features table)
+        from app.models import PredictionFeature
+        for f in FEATURES:
+            db.add(PredictionFeature(
+                prediction_id=prediction.id,
+                feature=f,
+                value=features.get(f),
+                contribution=result["contributions"].get(f),
+                impact=result["impacts"].get(f),
+            ))
 
         prediction = Prediction(
             student_id=student.id,
@@ -182,8 +214,9 @@ class MLService:
                 }
                 notify(
                     db, student.user_id,
-                    "Warning: Risk level increased",
-                    f"{student.user.full_name}'s risk increased from {prev.risk_level.value.upper()} to {result['risk_level'].upper()}.",
+                    "Academic Risk Increased",
+                    f"Risk increased from {prev.risk_probability:.0%} to "
+                    f"{result['risk_probability']:.0%} (previous: {prev.risk_level.value.upper()} → {result['risk_level'].upper()}).",
                     "risk_increased",
                     student.id,
                 )

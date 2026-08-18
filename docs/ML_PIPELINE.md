@@ -86,9 +86,11 @@ Each trained artifact is registered as a `ModelVersion` row (with `is_active` fl
 
 | Risk probability | Level |
 |---|---|
-| ≤ 0.39 | low |
-| ≤ 0.69 | moderate |
-| > 0.69 | high |
+| ≤ `risk_low` (default 0.39) | low |
+| ≤ `risk_high` (default 0.69) | moderate |
+| > `risk_high` | high |
+
+Thresholds are stored in `system_settings` and editable by an admin via `PUT /admin/settings/{key}` (validate: 0 < `risk_low` < `risk_high` < 1, else 400). The seed script hand-picks three demo students whose records land in each band (`student01` low ≈0.03, `student02` moderate ≈0.41, `student03` high ≈0.9+) — see [Data Architecture](DATA_ARCHITECTURE.md).
 
 ## Recommendations
 

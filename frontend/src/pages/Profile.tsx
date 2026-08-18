@@ -28,7 +28,8 @@ export default function Profile() {
 
   const rows: { label: string; value: string | undefined; icon: React.ElementType }[] = [
     { label: "Full name", value: user.full_name, icon: UserRound },
-    { label: "Email", value: user.email, icon: Mail },
+    { label: "Username", value: user.username, icon: UserRound },
+    ...(user.email ? [{ label: "Email", value: user.email, icon: Mail }] : []),
     { label: "Role", value: user.role, icon: BadgeCheck },
     ...(faculty
       ? [

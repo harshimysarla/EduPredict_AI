@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { GraduationCap, Lock, Mail, BrainCircuit, ShieldCheck, TrendingUp, Sparkles } from "lucide-react"
+import { GraduationCap, Lock, User, BrainCircuit, ShieldCheck, TrendingUp, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,13 +30,13 @@ const featureItems = [
 export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const quickFill = (em: string, pw: string) => {
-    setEmail(em)
+  const quickFill = (user: string, pw: string) => {
+    setUsername(user)
     setPassword(pw)
     setError(null)
   }
@@ -44,13 +44,13 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (!email || !password) {
-      setError("Please enter your email and password.")
+    if (!username || !password) {
+      setError("Please enter your username and password.")
       return
     }
     setLoading(true)
     try {
-      const res = await login(email.trim(), password)
+      const res = await login(username.trim(), password)
       toast.success(`Welcome back, ${res.full_name}!`)
       navigate(res.role === "student" ? "/student" : "/dashboard")
     } catch (err) {
@@ -139,17 +139,17 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Username</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@institution.edu"
+                  id="username"
+                  type="text"
+                  placeholder="e.g. student01"
                   className="pl-9"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
                 />
               </div>
             </div>
@@ -196,30 +196,46 @@ export default function Login() {
               <button
                 type="button"
                 className="flex w-full items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--muted)]"
-                onClick={() => quickFill("faculty@edupredict.local", "Faculty@123")}
-              >
-                <span className="font-medium">Faculty</span>
-                <span className="text-[var(--muted-foreground)]">faculty@edupredict.local</span>
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--muted)]"
-                onClick={() => quickFill("admin@edupredict.local", "Admin@123")}
+                onClick={() => quickFill("admin", "Admin@123")}
               >
                 <span className="font-medium">Admin</span>
-                <span className="text-[var(--muted-foreground)]">admin@edupredict.local</span>
+                <span className="text-[var(--muted-foreground)]">admin / Admin@123</span>
               </button>
               <button
                 type="button"
                 className="flex w-full items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--muted)]"
-                onClick={() => quickFill("student@edupredict.local", "Student@123")}
+                onClick={() => quickFill("faculty", "Faculty@123")}
               >
-                <span className="font-medium">Student</span>
-                <span className="text-[var(--muted-foreground)]">student@edupredict.local</span>
+                <span className="font-medium">Faculty (CSE)</span>
+                <span className="text-[var(--muted-foreground)]">faculty / Faculty@123</span>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--muted)]"
+                onClick={() => quickFill("student01", "Student@123")}
+              >
+                <span className="font-medium">Student (Low Risk)</span>
+                <span className="text-[var(--muted-foreground)]">student01 / Student@123</span>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--muted)]"
+                onClick={() => quickFill("student02", "Student@123")}
+              >
+                <span className="font-medium">Student (Moderate Risk)</span>
+                <span className="text-[var(--muted-foreground)]">student02 / Student@123</span>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 hover:bg-[var(--muted)]"
+                onClick={() => quickFill("student03", "Student@123")}
+              >
+                <span className="font-medium">Student (High Risk)</span>
+                <span className="text-[var(--muted-foreground)]">student03 / Student@123</span>
               </button>
             </div>
             <p className="mt-2 text-[11px] text-[var(--muted-foreground)]">
-              Development-only credentials. Passwords: Faculty@123 · Admin@123 · Student@123
+              Development-only credentials. All demo students share password Student@123.
             </p>
           </div>
         </motion.div>

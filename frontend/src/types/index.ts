@@ -2,7 +2,8 @@ export type Role = "admin" | "faculty" | "student"
 
 export interface User {
   id: number
-  email: string
+  username: string
+  email: string | null
   full_name: string
   role: Role
   is_active: boolean
@@ -244,4 +245,99 @@ export interface Subject {
   department_id: number
   credits: number
   semester: number
+}
+
+export interface DataSource {
+  name: string
+  type: string
+  status: string
+  display_name: string | null
+  last_synced_at: string | null
+  record_count: number | null
+  samvidha_status?: string
+}
+
+export interface SystemSetting {
+  key: string
+  value: string
+}
+
+export interface AcademicSummary {
+  profile: {
+    student_id: string
+    full_name: string | null
+    department: string | null
+    department_code: string | null
+    section: string | null
+    year: number
+    semester: number
+    academic_year: string | null
+    admission_year: number
+    username: string | null
+  }
+  health: {
+    overall_performance: number | null
+    attendance: number | null
+    engagement: number | null
+    internal_1: number | null
+    internal_2: number | null
+    internal_average: number | null
+    assignment_completion: number | null
+  }
+  subjects: {
+    subject_id: number
+    subject_name: string | null
+    subject_code: string | null
+    attendance: number | null
+    internal_marks: number | null
+    assignment_score: number | null
+    total_score: number | null
+    grade: string | null
+    trend: string
+  }[]
+  performance_history: { label: string; score: number; semester: number }[]
+  risk: {
+    risk_probability: number | null
+    risk_level: string | null
+    model_name: string | null
+    thresholds: { risk_low: number; risk_high: number }
+  }
+  recommendations: string[]
+  data_source: DataSource | null
+}
+
+export interface ImportValidationReport {
+  rows: number
+  valid_rows: number
+  warnings: number
+  rejected: number
+  errors: string[]
+  errors_total: number
+  error_truncated: boolean
+  missing_columns: string[]
+  column_map: Record<string, string | null>
+  will_create_students: boolean
+  imported: boolean
+  preview: Record<string, unknown>[]
+  valid_records?: Record<string, unknown>[]
+}
+
+export interface ImportResult {
+  imported: boolean
+  imported_rows: number
+  created_students: string[]
+  warnings: number
+  rejected: number
+  errors_total: number
+  source_status: string
+  record_count: number | null
+}
+
+export interface ImportHistoryItem {
+  id: number
+  name: string
+  filename: string
+  rows: number | null
+  status: string
+  created_at: string | null
 }

@@ -54,6 +54,37 @@ def my_student_profile(
     return _to_out(db, student)
 
 
+@router.get("/student/me/academic-summary")
+def my_academic_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Personalized academic dashboard data for the logged-in student,
+    computed from THEIR OWN records via the active data provider."""
+    if current_user.role != UserRole.STUDENT:
+        raise HTTPException(status_code=403, detail="Student access only")
+    student = db.query(Student).filter(Student.user_id == current_user.id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student profile not found")
+    from app.services.base import build_academic_summary
+    return build_academic_summary(db, student)
+
+
+@router.get("/data-source")
+def active_data_source(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models import DataSource
+    from app.services.base import get_active_data_source
+    src = get_active_data_source(db)
+    samvidha = db.query(DataSource).filter(DataSource.type == "SAMVIDHA").first()
+    return {
+        **src,
+        "samvidha_status": samvidha.status if samvidha else "NOT_CONFIGURED",
+    }
+
+
 @router.get("/faculty/me")
 def my_faculty_profile(
     db: Session = Depends(get_db),

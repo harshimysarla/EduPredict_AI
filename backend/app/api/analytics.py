@@ -5,12 +5,33 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_faculty_or_admin
 from app.models import (
-    User, Student, AcademicRecord, AttendanceRecord, EngagementRecord,
+    User, UserRole, Student, AcademicRecord, AttendanceRecord, EngagementRecord,
     Prediction, RiskLevel, Section, Department, Subject, Intervention, InterventionStatus,
 )
-from app.services.base import get_student_summary
+from app.services.base import get_student_summary, faculty_scope_filter
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
+
+
+def _scoped_student_ids(db: Session, current_user: User):
+    """Faculty/advisors only see analytics for students in their department.
+    Admin (or any non-faculty caller) gets None = no restriction."""
+    if current_user.role != UserRole.FACULTY:
+        return None
+    from app.models import FacultyProfile
+    fp = db.query(FacultyProfile).filter(FacultyProfile.user_id == current_user.id).first()
+    if fp is None:
+        return []
+    dept_ids = faculty_scope_filter(fp)
+    return [
+        sid for (sid,) in db.query(Student.id)
+        .join(Section, Student.section_id == Section.id)
+        .filter(Section.department_id.in_(dept_ids)).all()
+    ]
+
+
+def _in_scope(col, ids):
+    return col.in_(ids) if ids is not None else True
 
 
 @router.get("/dashboard")
@@ -18,7 +39,11 @@ def dashboard_analytics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_faculty_or_admin),
 ):
-    students = db.query(Student).filter(Student.is_active == True).all()  # noqa: E712
+    student_ids = _scoped_student_ids(db, current_user)
+    students_q = db.query(Student).filter(Student.is_active == True)  # noqa: E712
+    if student_ids is not None:
+        students_q = students_q.filter(Student.id.in_(student_ids))
+    students = students_q.all()
 
     total = len(students)
     summaries = [get_student_summary(db, s) for s in students]
@@ -47,16 +72,17 @@ def dashboard_analytics(
                 }
             )
 
-    # Performance trend: average total score per semester
+    # Performance trend: average total score per semester (scoped)
     trend = (
         db.query(AcademicRecord.semester, func.avg(AcademicRecord.total_score))
+        .filter(_in_scope(AcademicRecord.student_id, student_ids))
         .group_by(AcademicRecord.semester)
         .order_by(AcademicRecord.semester)
         .all()
     )
     performance_trend = [{"semester": sem, "average": round(avg_, 2)} for sem, avg_ in trend]
 
-    # Subject performance
+    # Subject performance (scoped)
     subject_perf = (
         db.query(
             Subject.name,
@@ -64,6 +90,7 @@ def dashboard_analytics(
             func.count(AcademicRecord.id),
         )
         .join(AcademicRecord, AcademicRecord.subject_id == Subject.id)
+        .filter(_in_scope(AcademicRecord.student_id, student_ids))
         .group_by(Subject.name)
         .all()
     )
@@ -191,6 +218,13 @@ def intervention_impact(
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         return None
+    from app.models import FacultyProfile
+    if current_user.role == UserRole.FACULTY:
+        fp = db.query(FacultyProfile).filter(FacultyProfile.user_id == current_user.id).first()
+        if fp is None or student.section is None or \
+                student.section.department_id not in faculty_scope_filter(fp):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=403, detail="Access denied to this student")
 
     interventions = (
         db.query(Intervention)

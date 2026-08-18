@@ -42,3 +42,23 @@ def mark_read(
     db.commit()
     db.refresh(n)
     return n
+
+
+@router.post("/{notification_id}/dismiss")
+def dismiss_notification(
+    notification_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Early-warning notifications can be dismissed (removed from the feed)."""
+    n = (
+        db.query(Notification)
+        .filter(Notification.id == notification_id, Notification.user_id == current_user.id)
+        .first()
+    )
+    if not n:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Notification not found")
+    db.delete(n)
+    db.commit()
+    return {"detail": "Dismissed"}

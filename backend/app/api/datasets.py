@@ -89,3 +89,96 @@ def validate_dataset(
         validation_errors=errors,
         preview=preview,
     )
+
+
+# ----- Academic records import (approved CSV provider) ---------------------------
+
+
+async def _read_csv_upload(file: UploadFile) -> pd.DataFrame:
+    if not (file.filename or "").endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Only CSV files are supported")
+    content = await file.read()
+    try:
+        return pd.read_csv(pd.io.common.BytesIO(content))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not read CSV: {str(e)}")
+
+
+def _save_import_history(db: Session, df: pd.DataFrame, report: dict, current_user: User) -> Dataset:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    ds = Dataset(
+        name=f"Academic Import ({report['rows']} rows)",
+        filename="academic-import.csv",
+        uploaded_by=current_user.id,
+        status="imported",
+        rows=report["rows"],
+        columns=len(df.columns),
+    )
+    db.add(ds)
+    db.commit()
+    db.refresh(ds)
+    return ds
+
+
+@router.post("/import/validate")
+async def validate_import_csv(
+    file: UploadFile = File(...),
+    column_map: str = Form("{}"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_faculty_or_admin),
+):
+    """Validate an approved academic CSV (preview only, nothing imported)."""
+    from app.providers import CsvAcademicDataProvider
+
+    df = await _read_csv_upload(file)
+    mapping = json.loads(column_map or "{}")
+    provider = CsvAcademicDataProvider(db)
+    report = provider.validate_import(df, mapping)
+    return report
+
+
+@router.post("/import")
+async def import_csv_records(
+    file: UploadFile = File(...),
+    column_map: str = Form("{}"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_faculty_or_admin),
+):
+    """Import valid records from an approved academic CSV into the database."""
+    from app.providers import CsvAcademicDataProvider
+
+    df = await _read_csv_upload(file)
+    mapping = json.loads(column_map or "{}")
+    provider = CsvAcademicDataProvider(db)
+    try:
+        result = provider.import_records(df, mapping)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    _save_import_history(db, df, result, current_user)
+    return result
+
+
+@router.get("/imports/history")
+def import_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_faculty_or_admin),
+):
+    """History of CSV academic imports."""
+    rows = (
+        db.query(Dataset)
+        .filter(Dataset.status == "imported")
+        .order_by(Dataset.created_at.desc())
+        .all()
+    )
+    return [
+        {
+            "id": d.id,
+            "name": d.name,
+            "rows": d.rows,
+            "columns": d.columns,
+            "status": d.status,
+            "created_at": d.created_at,
+            "uploaded_by": d.uploaded_by,
+        }
+        for d in rows
+    ]
