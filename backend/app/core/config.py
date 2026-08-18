@@ -18,17 +18,28 @@ def _find_env() -> str:
     return os.path.join(_BASE, ".env")
 
 
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=_find_env(), case_sensitive=True)
+def _get_default_database_url() -> str:
+    # If running on Vercel / serverless environment without external DB, use /tmp SQLite
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        return "sqlite:////tmp/edupredict.db"
+    return "sqlite:///./edupredict.db"
 
-    DATABASE_URL: str
-    SECRET_KEY: str
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=_find_env(),
+        case_sensitive=True,
+        extra="ignore",
+    )
+
+    DATABASE_URL: str = _get_default_database_url()
+    SECRET_KEY: str = "edupredict-ai-production-super-secret-key-2026-secure-32chars"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     FRONTEND_URL: str = "http://localhost:5173"
     MODEL_PATH: str = "./models"
     RANDOM_SEED: int = 42
-    MONGODB_URI: str = "mongodb://localhost:27017"
+    MONGODB_URI: str = "mongodb+srv://harshimysarla_db_user:vggZGd2D2d1Y7kbM@cluster0.mcqyqtp.mongodb.net/edupredict_ai?retryWrites=true&w=majority&appName=Cluster0"
     MONGODB_DB_NAME: str = "edupredict_ai"
     # Future official IARE/Samvidha integration (leave empty; NOT used today)
     SAMVIDHA_API_BASE_URL: str = ""

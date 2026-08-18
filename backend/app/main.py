@@ -1,7 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -10,7 +10,7 @@ from app.api import (
     models, notifications, reports, meta, admin, portal,
 )
 from app.core.config import settings
-from app.core.database import Base, engine
+from app.core.database import init_db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("edupredict")
@@ -19,6 +19,10 @@ logger = logging.getLogger("edupredict")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting EduPredict AI backend")
+    try:
+        init_db()
+    except Exception as exc:
+        logger.exception("Database init warning during startup: %s", exc)
     yield
     logger.info("Shutting down EduPredict AI backend")
 
@@ -32,24 +36,28 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(auth.router)
-app.include_router(meta.router)
-app.include_router(students.router)
-app.include_router(predictions.router)
-app.include_router(interventions.router)
-app.include_router(analytics.router)
-app.include_router(datasets.router)
-app.include_router(models.router)
-app.include_router(notifications.router)
-app.include_router(reports.router)
-app.include_router(admin.router)
-app.include_router(portal.router)
+# All standard routers
+ROUTERS = [
+    auth.router, meta.router, students.router, predictions.router,
+    interventions.router, analytics.router, datasets.router, models.router,
+    notifications.router, reports.router, admin.router, portal.router,
+]
+
+# 1. Mount under /api prefix for /api/... calls
+api_router = APIRouter(prefix="/api")
+for r in ROUTERS:
+    api_router.include_router(r)
+app.include_router(api_router)
+
+# 2. Also mount at root for direct /auth, /students, etc.
+for r in ROUTERS:
+    app.include_router(r)
 
 
 @app.exception_handler(Exception)
@@ -62,5 +70,16 @@ async def unhandled_exception_handler(request, exc):
 
 
 @app.get("/")
+@app.get("/api")
 def root():
     return {"app": "EduPredict AI", "status": "running", "docs": "/docs"}
+
+
+@app.get("/health")
+@app.get("/api/health")
+def health():
+    from app.core.mongodb import check_mongo_status
+    return {
+        "status": "healthy",
+        "mongodb": check_mongo_status(),
+    }
