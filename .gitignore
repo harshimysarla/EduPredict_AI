@@ -20,6 +20,7 @@ frontend/.env.local
 models/
 uploads/
 backend/data/
+*.db
 
 # Logs / OS
 *.log
