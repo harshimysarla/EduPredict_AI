@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edupredict-ai"
+version = "1.0.0"
+
+[tool.fastapi]
+entrypoint = "backend.app.main:app"
+
+[tool.vercel]
+entrypoint = "backend.app.main:app"
