@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.types import ASGIApp, Scope, Receive, Send
 
 from app.api import (
     auth, students, predictions, interventions, analytics, datasets,
@@ -14,6 +15,39 @@ from app.core.database import init_db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("edupredict")
+
+
+class VercelPathMiddleware:
+    """
+    ASGI middleware to resolve Vercel serverless rewritten paths.
+    When Vercel rewrites /api/(.*) -> /api/index.py, the ASGI scope['path'] is often
+    set to '/api/index.py', while the real URL requested by the browser is placed in
+    'x-matched-path' or 'x-forwarded-uri'. This middleware restores scope['path'] so
+    FastAPI router finds the matching POST/GET/PUT endpoint instead of returning 405.
+    """
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] == "http":
+            headers = dict(scope.get("headers", []))
+            
+            # Check for Vercel's original matched path header
+            matched = (
+                headers.get(b"x-matched-path")
+                or headers.get(b"x-forwarded-uri")
+                or headers.get(b"x-real-url")
+            )
+            
+            if matched:
+                path = matched.decode("latin1").split("?")[0]
+                if path and path != "/api/index.py":
+                    scope["path"] = path
+            elif scope["path"].startswith("/api/index.py"):
+                subpath = scope["path"][len("/api/index.py"):]
+                scope["path"] = "/api" + subpath if subpath else "/"
+
+        await self.app(scope, receive, send)
 
 
 @asynccontextmanager
@@ -33,6 +67,9 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Apply Vercel Path Middleware first so all routes receive the proper path
+app.add_middleware(VercelPathMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -55,7 +92,7 @@ for r in ROUTERS:
     api_router.include_router(r)
 app.include_router(api_router)
 
-# 2. Also mount under /api/index.py in case Vercel rewrites preserve the full entrypoint file path
+# 2. Also mount under /api/index.py as a fallback
 api_index_router = APIRouter(prefix="/api/index.py")
 for r in ROUTERS:
     api_index_router.include_router(r)
