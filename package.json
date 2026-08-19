@@ -1,5 +1,6 @@
 {
-  "name": "edupredict-ai",
+  "name": "edupredict-ai-deploy",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "build": "npm --prefix frontend install && npm --prefix frontend run build"
