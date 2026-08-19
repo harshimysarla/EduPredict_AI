@@ -18,6 +18,8 @@ import {
   ReferenceLine,
 } from "recharts"
 
+import type { PortalAttendanceRow } from "@/types"
+
 export const CHART_COLORS = {
   primary: "#6366f1",
   emerald: "#10b981",
@@ -369,10 +371,9 @@ export function CgpaTrendChart({
 export function AttendanceBarsChart({
   data,
 }: {
-  data: { courseCode?: string; courseName?: string; attendancePercentage?: number | null }[]
+  data: PortalAttendanceRow[]
 }) {
   const chartData = data.map((d) => ({
-    ...d,
     course: d.courseCode ?? d.courseName ?? "—",
     attendancePercentage: d.attendancePercentage ?? 0,
   }))

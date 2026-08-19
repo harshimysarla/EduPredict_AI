@@ -546,16 +546,16 @@ function SubjectTable({ initialSemester }: { initialSemester?: number }) {
               </thead>
               <tbody>
                 {subjects.map((s, i) => (
-                  <tr key={`${s.semester}-${s.courseCode}-${i}`} className="border-b border-[var(--border)] last:border-0">
-                    <td className="px-4 py-2.5">Semester {s.semester}</td>
+                  <tr key={`${s.semester}-${s.courseCode ?? ''}-${i}`} className="border-b border-[var(--border)] last:border-0">
+                    <td className="px-4 py-2.5">Semester {s.semester ?? '—'}</td>
                     <td className="px-4 py-2.5">
-                      <p className="font-medium leading-tight">{s.courseName}</p>
-                      <p className="text-[11px] text-[var(--muted-foreground)]">{s.courseCode}</p>
+                      <p className="font-medium leading-tight">{s.courseName ?? '—'}</p>
+                      <p className="text-[11px] text-[var(--muted-foreground)]">{s.courseCode ?? '—'}</p>
                     </td>
                     <td className="px-4 py-2.5">
                       <Badge variant="secondary">{s.type === "Laboratory" ? "Lab" : "Theory"}</Badge>
                     </td>
-                    <td className="px-4 py-2.5">{s.credits}</td>
+                    <td className="px-4 py-2.5">{s.credits ?? 0}</td>
                     <td className="px-4 py-2.5 text-right font-semibold">
                       {s.totalMarks != null ? `${formatNumber(s.totalMarks)}%` : "—"}
                     </td>
