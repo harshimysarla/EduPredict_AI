@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,32 +21,65 @@ logger = logging.getLogger("edupredict")
 class VercelPathMiddleware:
     """
     ASGI middleware to resolve Vercel serverless rewritten paths.
-    When Vercel rewrites /api/(.*) -> /api/index.py, the ASGI scope['path'] is often
-    set to '/api/index.py', while the real URL requested by the browser is placed in
-    'x-matched-path' or 'x-forwarded-uri'. This middleware restores scope['path'] so
-    FastAPI router finds the matching POST/GET/PUT endpoint instead of returning 405.
+
+    Vercel rewrites /api/(.*) -> /api/index.py. The Python function normally
+    receives the ORIGINAL browser path in scope['path'] (so /api/auth/login
+    matches the /api-prefixed router). Some setups only forward the destination
+    (/api/index.py) and place the real URL in an x-*-path/uri header instead.
+    This middleware restores the real path — tolerating full URLs, query
+    strings and fragments — so the FastAPI router always finds the endpoint.
     """
+    # Header candidates that may carry the original request path.
+    _PATH_HEADERS = (
+        b"x-matched-path",
+        b"x-vercel-forwarded-uri",
+        b"x-forwarded-uri",
+        b"x-real-url",
+    )
+    # Vercel destination the /api rewrite resolves to (not a real endpoint).
+    _DEST = "/api/index.py"
+
     def __init__(self, app: ASGIApp):
         self.app = app
 
+    @staticmethod
+    def _clean_path(raw: str) -> str:
+        raw = (raw or "").strip()
+        if not raw:
+            return ""
+        if raw.startswith(("http://", "https://")):
+            raw = urlparse(raw).path
+        if "?" in raw:
+            raw = raw.split("?", 1)[0]
+        if "#" in raw:
+            raw = raw.split("#", 1)[0]
+        if not raw.startswith("/"):
+            raw = "/" + raw
+        return raw
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send):
         if scope["type"] == "http":
-            headers = dict(scope.get("headers", []))
-            
-            # Check for Vercel's original matched path header
-            matched = (
-                headers.get(b"x-matched-path")
-                or headers.get(b"x-forwarded-uri")
-                or headers.get(b"x-real-url")
-            )
-            
-            if matched:
-                path = matched.decode("latin1").split("?")[0]
-                if path and path != "/api/index.py":
-                    scope["path"] = path
-            elif scope["path"].startswith("/api/index.py"):
-                subpath = scope["path"][len("/api/index.py"):]
-                scope["path"] = "/api" + subpath if subpath else "/"
+            headers = dict(scope.get("headers", []) or [])
+            path = scope.get("path", "")
+
+            restored = ""
+            for key in self._PATH_HEADERS:
+                value = headers.get(key)
+                if value:
+                    candidate = self._clean_path(value.decode("latin1"))
+                    if candidate and candidate != self._DEST:
+                        restored = candidate
+                        break
+
+            if restored:
+                path = restored
+            elif path.startswith(self._DEST):
+                # Vercel may pass the destination with the real subpath appended.
+                subpath = path[len(self._DEST):]
+                path = ("/api" + subpath) if subpath else "/"
+
+            if path and path != scope.get("path"):
+                scope["path"] = path
 
         await self.app(scope, receive, send)
 
@@ -71,9 +105,18 @@ app = FastAPI(
 # Apply Vercel Path Middleware first so all routes receive the proper path
 app.add_middleware(VercelPathMiddleware)
 
+# CORS: allow the configured production origin plus local dev origins.
+# Falls back to "*" (current permissive behaviour) when FRONTEND_URL is unset.
+_frontend_origin = (settings.FRONTEND_URL or "").strip().rstrip("/")
+_cors_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+if _frontend_origin and _frontend_origin != "*":
+    _cors_origins.insert(0, _frontend_origin)
+else:
+    _cors_origins.insert(0, "*")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
