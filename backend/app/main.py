@@ -1,10 +1,12 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Scope, Receive, Send
 
 from app.api import (
@@ -16,6 +18,11 @@ from app.core.database import init_db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("edupredict")
+
+# Built Vite frontend (present after `npm run build` / on Vercel builds).
+# When it exists, this app also serves the SPA so a single Vercel function
+# handles both /api and the frontend.
+_FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
 
 class VercelPathMiddleware:
@@ -156,9 +163,17 @@ async def unhandled_exception_handler(request, exc):
 
 
 @app.get("/")
+def root():
+    index = _FRONTEND_DIST / "index.html"
+    if index.is_file():
+        # SPA home - the built frontend exists.
+        return FileResponse(str(index))
+    return {"app": "EduPredict AI", "status": "running", "docs": "/docs"}
+
+
 @app.get("/api")
 @app.get("/api/index.py")
-def root():
+def api_root():
     return {"app": "EduPredict AI", "status": "running", "docs": "/docs"}
 
 
@@ -171,3 +186,23 @@ def health():
         "status": "healthy",
         "mongodb": check_mongo_status(),
     }
+
+
+# ── Serve the built frontend (production / Vercel only) ────────────────
+if _FRONTEND_DIST.is_dir():
+    assets_dir = _FRONTEND_DIST / "assets"
+    if assets_dir.is_dir():
+        app.mount(
+            "/assets",
+            StaticFiles(directory=str(assets_dir)),
+            name="assets",
+        )
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str):
+        candidate = _FRONTEND_DIST / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(str(candidate))
+        if full_path.startswith("api") or full_path.startswith("assets"):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        return FileResponse(str(_FRONTEND_DIST / "index.html"))
